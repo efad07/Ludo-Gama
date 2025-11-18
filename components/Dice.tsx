@@ -81,15 +81,23 @@ const Dice: React.FC<DiceProps> = ({ value, isRolling, size = 50 }) => {
     const translateZ = size / 2;
     const dotSize = size / 6.5;
 
-    // Standard die layout where opposite faces sum to 7.
+    // Corrected rotations to ensure the rolled number faces the camera.
+    // Based on standard CSS cube transforms:
+    // 1 (Front) -> 0,0
+    // 2 (Bottom, X -90) -> needs X +90 to face front
+    // 3 (Left, Y -90) -> needs Y +90 to face front
+    // 4 (Right, Y 90) -> needs Y -90 to face front
+    // 5 (Top, X 90) -> needs X -90 to face front
+    // 6 (Back, Y 180) -> needs Y 180 to face front
     const correctedRotations: Record<number, string> = {
         1: 'rotateX(0deg) rotateY(0deg)',
-        2: 'rotateX(-90deg) rotateY(0deg)',
-        3: 'rotateX(0deg) rotateY(-90deg)',
-        4: 'rotateX(0deg) rotateY(90deg)',
-        5: 'rotateX(90deg) rotateY(0deg)',
+        2: 'rotateX(90deg) rotateY(0deg)', 
+        3: 'rotateX(0deg) rotateY(90deg)', 
+        4: 'rotateX(0deg) rotateY(-90deg)', 
+        5: 'rotateX(-90deg) rotateY(0deg)', 
         6: 'rotateX(0deg) rotateY(180deg)',
     };
+    
 
     const transform = value && !isRolling ? correctedRotations[value] : undefined;
     

@@ -37,12 +37,31 @@ const PlayerBase: React.FC<{color: PlayerColor}> = ({color}) => {
 }
 
 const Board: React.FC<BoardProps> = ({ pieces, onPieceClick, movablePieces }) => {
-    const getPiecePosition = (piece: Piece): { top: string; left: string; } => {
+    
+    // Helper to group pieces by position to calculate offsets
+    const getPiecesAtPosition = (targetPiece: Piece) => {
+        if (targetPiece.status === 'base') return [targetPiece];
+        return pieces.filter(p => 
+            p.status === targetPiece.status && 
+            p.position === targetPiece.position
+        );
+    };
+
+    const getPiecePosition = (piece: Piece, indexInStack: number, stackSize: number): { top: string; left: string; scale: number } => {
         let coords: [number, number] | null = null;
+        
         if (piece.status === 'base') {
             const pieceIndex = parseInt(piece.id.split('-')[1]);
             coords = BASE_COORDS[piece.color][pieceIndex];
-        } else if (piece.position >= 52 && piece.position <= 57) { // In home path
+            // No offsets needed for base, they have fixed unique coords
+            return {
+                top: `${(coords[0] / 15) * 100 + (1 / 15 * 100 / 2)}%`,
+                left: `${(coords[1] / 15) * 100 + (1 / 15 * 100 / 2)}%`,
+                scale: 1
+            };
+        } 
+        
+        if (piece.position >= 52 && piece.position <= 57) { // In home path
             coords = HOME_PATH_COORDS[piece.color][piece.position];
         } else if (piece.status === 'active') { // On main track
             coords = PATH_COORDS[piece.position];
@@ -50,10 +69,68 @@ const Board: React.FC<BoardProps> = ({ pieces, onPieceClick, movablePieces }) =>
             coords = [7, 7]; // Center of the board
         }
 
-        if(!coords) return {top: '50%', left: '50%'}; // Fallback
+        if(!coords) return {top: '50%', left: '50%', scale: 1}; 
+
+        // Base position (center of the cell)
+        // Each cell is approx 6.66% of the board
+        let topPercent = (coords[0] / 15) * 100 + (1 / 15 * 100 / 2);
+        let leftPercent = (coords[1] / 15) * 100 + (1 / 15 * 100 / 2);
+        let scale = 1;
+
+        // Calculate offset if multiple pieces share the cell
+        if (stackSize > 1) {
+            scale = 0.65; // Shrink pieces to prevent clutter
+            const offset = 1.8; // Percentage offset from center (approx 1/4 of a cell)
+
+            // Distribution Logic based on stack size
+            if (stackSize === 2) {
+                // Diagonal separation
+                if (indexInStack === 0) { // Top Left
+                    topPercent -= offset;
+                    leftPercent -= offset;
+                } else { // Bottom Right
+                    topPercent += offset;
+                    leftPercent += offset;
+                }
+            } else if (stackSize === 3) {
+                // Triangle formation
+                if (indexInStack === 0) { // Top Center
+                    topPercent -= offset;
+                } else if (indexInStack === 1) { // Bottom Left
+                    topPercent += offset;
+                    leftPercent -= offset;
+                } else { // Bottom Right
+                    topPercent += offset;
+                    leftPercent += offset;
+                }
+            } else {
+                // 4+ pieces: 2x2 Grid
+                // 0: Top Left, 1: Top Right, 2: Bottom Left, 3: Bottom Right
+                switch (indexInStack % 4) {
+                    case 0:
+                        topPercent -= offset;
+                        leftPercent -= offset;
+                        break;
+                    case 1:
+                        topPercent -= offset;
+                        leftPercent += offset;
+                        break;
+                    case 2:
+                        topPercent += offset;
+                        leftPercent -= offset;
+                        break;
+                    case 3:
+                        topPercent += offset;
+                        leftPercent += offset;
+                        break;
+                }
+            }
+        }
+
         return {
-            top: `${(coords[0] / 15) * 100 + (1 / 15 * 100 / 2)}%`,
-            left: `${(coords[1] / 15) * 100 + (1 / 15 * 100 / 2)}%`,
+            top: `${topPercent}%`,
+            left: `${leftPercent}%`,
+            scale
         };
     };
 
@@ -101,15 +178,25 @@ const Board: React.FC<BoardProps> = ({ pieces, onPieceClick, movablePieces }) =>
             </div>
 
             {/* Pieces */}
-            {pieces.map(piece => (
-                <PieceComponent
-                    key={piece.id}
-                    piece={piece}
-                    isMovable={movablePieces.includes(piece.id)}
-                    onClick={onPieceClick}
-                    style={getPiecePosition(piece)}
-                />
-            ))}
+            {pieces.map(piece => {
+                const stack = getPiecesAtPosition(piece);
+                // Sort stack by color so they have a consistent order in the grid
+                stack.sort((a, b) => a.color.localeCompare(b.color));
+                
+                const indexInStack = stack.findIndex(p => p.id === piece.id);
+                const styleInfo = getPiecePosition(piece, indexInStack, stack.length);
+
+                return (
+                    <PieceComponent
+                        key={piece.id}
+                        piece={piece}
+                        isMovable={movablePieces.includes(piece.id)}
+                        onClick={onPieceClick}
+                        style={{ top: styleInfo.top, left: styleInfo.left }}
+                        scale={styleInfo.scale}
+                    />
+                );
+            })}
         </div>
     );
 };

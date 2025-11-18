@@ -7,9 +7,10 @@ interface PieceProps {
     isMovable: boolean;
     onClick: (id: string) => void;
     style: React.CSSProperties;
+    scale: number;
 }
 
-const PieceComponent: React.FC<PieceProps> = ({ piece, isMovable, onClick, style }) => {
+const PieceComponent: React.FC<PieceProps> = ({ piece, isMovable, onClick, style, scale }) => {
     const config = PLAYER_CONFIG[piece.color];
     const pieceSize = 'w-[6%] h-[6%]';
     
@@ -21,15 +22,18 @@ const PieceComponent: React.FC<PieceProps> = ({ piece, isMovable, onClick, style
 
     return (
         <div
-            className={`absolute ${pieceSize} rounded-full flex items-center justify-center -translate-x-1/2 -translate-y-1/2 transition-transform duration-300 ease-in-out z-10 transform ${isMovable ? 'hover:scale-110' : ''}`}
+            className={`absolute ${pieceSize} rounded-full flex items-center justify-center -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-in-out transform ${isMovable ? 'hover:scale-110 hover:z-50' : 'z-10'}`}
             style={{
                 ...style,
                 cursor: isMovable ? 'pointer' : 'default',
+                transform: `translate(-50%, -50%) scale(${scale})`,
+                // Ensure movable pieces are always on top if stacked
+                zIndex: isMovable ? 30 : 10
             }}
             onClick={handleClick}
         >
              <div 
-                className={`w-full h-full rounded-full transition-all duration-200 flex items-center justify-center text-white font-bold ${isMovable ? 'piece-movable-animate' : ''}`}
+                className={`relative w-full h-full rounded-full transition-all duration-200 flex items-center justify-center text-white font-bold ${isMovable ? 'piece-movable-animate' : ''}`}
                 style={{
                     backgroundColor: config.primary,
                     backgroundImage: `radial-gradient(circle at 30% 25%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 50%)`,
@@ -37,7 +41,6 @@ const PieceComponent: React.FC<PieceProps> = ({ piece, isMovable, onClick, style
                     border: '1px solid rgba(0,0,0,0.2)'
                 }}
             >
-                {/* Number removed for a classic pawn look */}
             </div>
         </div>
     );

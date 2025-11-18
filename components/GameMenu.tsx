@@ -10,9 +10,11 @@ interface GameMenuProps {
     onOpenRules: () => void;
     onOpenSettings: () => void;
     onResetGame: () => void;
+    isAssistantVisible: boolean;
+    onToggleAssistant: () => void;
 }
 
-const GameMenu: React.FC<GameMenuProps> = ({ onOpenRules, onOpenSettings, onResetGame }) => {
+const GameMenu: React.FC<GameMenuProps> = ({ onOpenRules, onOpenSettings, onResetGame, isAssistantVisible, onToggleAssistant }) => {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +59,12 @@ const GameMenu: React.FC<GameMenuProps> = ({ onOpenRules, onOpenSettings, onRese
                         className="w-full text-left px-4 py-2 text-amber-900 hover:bg-amber-100 hover:text-amber-900 transition-colors"
                     >
                         Settings
+                    </button>
+                    <button
+                        onClick={() => handleMenuItemClick(onToggleAssistant)}
+                        className="w-full text-left px-4 py-2 text-amber-900 hover:bg-amber-100 hover:text-amber-900 transition-colors"
+                    >
+                        {isAssistantVisible ? 'Hide Assistant' : 'Show Assistant'}
                     </button>
                     <div className="border-t border-amber-800/20 my-1"></div>
                     <button

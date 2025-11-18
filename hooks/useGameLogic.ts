@@ -63,7 +63,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
             if (diceValue !== 6) return null;
             const startPos = START_POSITIONS[playerColor];
             
-            // Check if the start position is blocked by an opponent's block.
+            // Check if the start position is blocked by an opponent's block (2 or more pieces).
             const piecesAtStart = Object.values(allPieces).filter(p => p.position === startPos && p.color !== playerColor);
             if (piecesAtStart.length >= 2) {
                 const colorCounts = piecesAtStart.reduce((acc, p) => {
@@ -74,6 +74,13 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                     return null; // Start is blocked by an opponent.
                 }
             }
+            
+            // Check if we already have 4 pieces at start (full stack)
+            const myPiecesAtStart = Object.values(allPieces).filter(p => p.position === startPos && p.color === playerColor);
+            if (myPiecesAtStart.length >= 4) {
+                return null; // Cannot add a 5th piece
+            }
+
             return { position: startPos, status: 'active' };
         }
 
@@ -107,6 +114,8 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
         
         // 3. Check for blocks along the calculated path
         for (const pos of path) {
+            const isDestination = pos === finalPosition;
+
             if (pos >= 58 || pos < 0) continue; 
             if (pos >= 52 && pos <= 57) continue; // No blocks in the home path.
             
@@ -123,10 +132,19 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                 }
             }
 
-            // Check for self blocks (cannot pass over or form a block of 3+)
+            // Check for self blocks (stacking)
             const selfPiecesOnSquare = Object.values(allPieces).filter(p => p.position === pos && p.color === playerColor);
-            if (selfPiecesOnSquare.length >= 2) {
-                return null;
+            
+            if (isDestination) {
+                // If it's the destination, we allow stacking up to 4 pieces.
+                if (selfPiecesOnSquare.length >= 4) {
+                    return null; // Square is full (max 4)
+                }
+            } else {
+                // If passing through, we cannot pass a block (wall) of 2 or more pieces.
+                if (selfPiecesOnSquare.length >= 2) {
+                    return null;
+                }
             }
         }
 

@@ -1,5 +1,3 @@
-
-
 export type PlayerColor = 'red' | 'green' | 'yellow' | 'blue';
 
 export type PieceStatus = 'base' | 'active' | 'home';
