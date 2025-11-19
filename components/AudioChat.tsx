@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback, createContext } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality, Blob } from '@google/genai';
 import { encode, decode, decodeAudioData } from '../utils/audio';
@@ -132,7 +133,8 @@ export const AudioProvider: React.FC<{ gameState: GameState; children: React.Rea
         try {
             let apiKey = '';
             try {
-                apiKey = process.env.API_KEY || '';
+                // Using provided key as fallback for user convenience
+                apiKey = process.env.API_KEY || 'AIzaSyDAD0wnAqIjV5qYYDyGURLCcSEGP-9fO2k';
             } catch (e) {
                 console.error("Environment access error:", e);
             }

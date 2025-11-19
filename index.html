@@ -21,30 +21,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
       :root {
-        --bg-deep: #0f172a;
-        --glass-border: rgba(255, 255, 255, 0.08);
-        --neon-glow: 0 0 10px rgba(255, 255, 255, 0.5), 0 0 20px rgba(255, 255, 255, 0.3);
+        --bg-deep: #020617;
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --neon-glow: 0 0 10px rgba(59, 130, 246, 0.5), 0 0 20px rgba(59, 130, 246, 0.3);
       }
       body {
         overscroll-behavior: none;
         background-color: var(--bg-deep);
-        /* Cyber grid background */
+        /* Dark grid background */
         background-image: 
-          linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px), 
-          linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px),
-          radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 1) 100%);
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), 
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0) 0%, #000000 100%);
         background-size: 40px 40px, 40px 40px, 100% 100%;
         font-family: 'Outfit', sans-serif;
         color: #e2e8f0;
       }
 
-      /* Utility: Glassmorphism */
+      /* Utility: Glassmorphism Dark */
       .glass-panel {
         background: rgba(15, 23, 42, 0.6);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
         border: 1px solid var(--glass-border);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
       }
 
       /* Dice Animation */
@@ -88,7 +88,7 @@
       .custom-scrollbar::-webkit-scrollbar { width: 4px; }
       .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
       .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
-      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
 
       /* Mic Ripple - Holographic Style */
       @keyframes ripple {

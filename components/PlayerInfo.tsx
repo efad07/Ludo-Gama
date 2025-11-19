@@ -1,3 +1,4 @@
+
 import React, { useContext } from 'react';
 import Dice from './Dice';
 import type { PlayerColor, GameStatus } from '../types';
@@ -73,7 +74,7 @@ const PlayerInfo: React.FC<PlayerInfoProps> = ({ color, name, isCurrent, diceVal
         <div
             className={`flex items-center gap-3 p-3 rounded-2xl transition-all duration-500 w-[48%] relative overflow-hidden
             ${isReversed ? 'flex-row-reverse text-right' : 'flex-row text-left'}
-            ${isCurrent ? 'bg-[#0f172a]/80 backdrop-blur-xl opacity-100 scale-[1.02] z-20' : 'bg-[#0f172a]/40 backdrop-blur-md opacity-60 scale-95 z-10 border border-white/5'}
+            ${isCurrent ? 'bg-slate-900 shadow-xl opacity-100 scale-[1.02] z-20' : 'bg-slate-800/90 opacity-90 scale-95 z-10 border border-white/5 shadow-md'}
             `}
             style={glowStyle}
         >

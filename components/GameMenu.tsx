@@ -44,8 +44,8 @@ const GameMenu: React.FC<GameMenuProps> = ({ onOpenRules, onOpenSettings, onRese
         <div className="absolute top-4 right-4 z-40 flex gap-2 items-center" ref={menuRef}>
             {isOnline && (
                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm animate-scale-in">
-                    <div className={`w-2 h-2 rounded-full ${onlineStatus === 'connected' ? 'bg-green-400 shadow-[0_0_8px_#4ade80]' : 'bg-yellow-400 animate-pulse'}`}></div>
-                    <span className="text-xs font-mono text-white/80">
+                    <div className={`w-2 h-2 rounded-full ${onlineStatus === 'connected' ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-yellow-500 animate-pulse'}`}></div>
+                    <span className="text-xs font-mono text-slate-300">
                         Room: {roomId}
                     </span>
                 </div>
@@ -53,7 +53,7 @@ const GameMenu: React.FC<GameMenuProps> = ({ onOpenRules, onOpenSettings, onRese
 
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="p-2.5 rounded-full text-white/70 hover:text-white bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/5 transition-all duration-200 shadow-lg"
+                className="p-2.5 rounded-full text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 transition-all duration-200 shadow-sm hover:shadow-md"
                 aria-label="Game Menu"
             >
                 <GearIcon />
@@ -63,28 +63,28 @@ const GameMenu: React.FC<GameMenuProps> = ({ onOpenRules, onOpenSettings, onRese
                 <div className="absolute right-0 top-12 w-60 glass-panel rounded-2xl py-2 origin-top-right animate-scale-in overflow-hidden z-50">
                     <button
                         onClick={() => handleMenuItemClick(onOpenRules)}
-                        className="w-full text-left px-5 py-3 text-white/80 hover:bg-white/10 transition-colors text-sm font-medium"
+                        className="w-full text-left px-5 py-3 text-slate-300 hover:bg-white/10 transition-colors text-sm font-medium"
                     >
                         Game Rules
                     </button>
                     <button
                         onClick={() => handleMenuItemClick(onOpenSettings)}
-                        className="w-full text-left px-5 py-3 text-white/80 hover:bg-white/10 transition-colors text-sm font-medium"
+                        className="w-full text-left px-5 py-3 text-slate-300 hover:bg-white/10 transition-colors text-sm font-medium"
                     >
                         Settings
                     </button>
                     <button
                         onClick={() => handleMenuItemClick(onToggleAssistant)}
-                        className="w-full text-left px-5 py-3 text-white/80 hover:bg-white/10 transition-colors text-sm font-medium"
+                        className="w-full text-left px-5 py-3 text-slate-300 hover:bg-white/10 transition-colors text-sm font-medium"
                     >
                         {isAssistantVisible ? 'Hide AI Assistant' : 'Show AI Assistant'}
                     </button>
                     
                     {isOnline && (
-                         <div className="px-5 py-3 bg-white/5 text-xs font-mono text-white/60 break-all border-t border-white/5">
+                         <div className="px-5 py-3 bg-black/20 text-xs font-mono text-slate-400 break-all border-t border-white/10">
                              ID: {roomId}
                              <br/>
-                             Status: <span className={onlineStatus === 'connected' ? 'text-green-400' : 'text-yellow-400'}>{onlineStatus}</span>
+                             Status: <span className={onlineStatus === 'connected' ? 'text-green-400' : 'text-yellow-500'}>{onlineStatus}</span>
                          </div>
                     )}
 

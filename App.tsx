@@ -32,7 +32,7 @@ const App: React.FC = () => {
 
     return (
         <AudioProvider gameState={gameState} isAssistantVisible={isAssistantVisible}>
-            <main className="w-screen h-screen flex flex-col justify-center items-center p-4 text-white overflow-hidden relative">
+            <main className="w-screen h-screen flex flex-col justify-center items-center p-4 text-slate-200 overflow-hidden relative">
                  <GameMenu
                     onOpenRules={() => setIsRulesOpen(true)}
                     onOpenSettings={() => setIsSettingsOpen(true)}
@@ -44,10 +44,10 @@ const App: React.FC = () => {
                     onlineStatus={gameState.onlineStatus}
                 />
                 
-                {/* Decorative background elements */}
+                {/* Decorative background elements - Dark Mode */}
                 <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
-                    <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-blue-500/10 rounded-full blur-[100px]"></div>
-                    <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-purple-500/10 rounded-full blur-[100px]"></div>
+                    <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-blue-600/20 rounded-full blur-[120px]"></div>
+                    <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-purple-600/20 rounded-full blur-[120px]"></div>
                 </div>
 
                 <div className="flex flex-col justify-center items-center w-full max-w-[800px] mx-auto gap-4 z-10">
@@ -101,7 +101,7 @@ const App: React.FC = () => {
                 
                 {/* Footer / Message Bar */}
                 <footer className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-20">
-                     <div className="glass-panel bg-black/60 px-8 py-3 rounded-full shadow-[0_0_20px_rgba(0,0,0,0.5)] border border-white/10 flex items-center gap-2 backdrop-blur-xl">
+                     <div className="glass-panel bg-slate-900/80 px-8 py-3 rounded-full shadow-[0_0_20px_rgba(0,0,0,0.4)] border border-white/10 flex items-center gap-2 backdrop-blur-xl">
                         <div className={`w-2 h-2 rounded-full animate-pulse ${gameState.isOnline ? 'bg-blue-400 shadow-[0_0_10px_#60a5fa]' : 'bg-green-400'}`}></div>
                         <p className="text-white/90 font-medium tracking-wide text-sm sm:text-base">
                             {gameState.isOnline && gameState.myColor ? `(You are ${gameState.myColor}) ` : ''}

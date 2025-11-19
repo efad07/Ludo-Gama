@@ -102,12 +102,12 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSave, currentSet
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-            <div className="bg-[#fefce8] rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-md m-4 border border-amber-800/20">
-                <h2 className="text-3xl font-bold mb-8 text-center text-amber-900">Game Settings</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-md flex justify-center items-center z-50 p-4">
+            <div className="bg-slate-900/90 border border-white/10 rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-md m-4 backdrop-blur-xl">
+                <h2 className="text-3xl font-bold mb-8 text-center text-white tracking-tight">Game Settings</h2>
                 
                 <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-amber-800/80 border-b border-amber-800/20 pb-2">Player Names</h3>
+                    <h3 className="text-lg font-semibold text-slate-400 border-b border-white/10 pb-2">Player Names</h3>
                     {PLAYER_COLORS.map(color => (
                         <div key={color} className="flex items-center gap-4">
                             <label htmlFor={`player-name-${color}`} className="w-24 text-right font-semibold text-lg" style={{ color: PLAYER_CONFIG[color].primary }}>
@@ -118,19 +118,19 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSave, currentSet
                                 type="text"
                                 value={settings.playerNames[color]}
                                 onChange={(e) => handleNameChange(color, e.target.value)}
-                                className="flex-1 bg-white border-2 border-amber-800/20 rounded-lg px-4 py-2 text-gray-800 focus:ring-4 focus:ring-amber-500/30 focus:border-amber-500 focus:outline-none transition"
+                                className="flex-1 bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:outline-none transition"
                             />
                         </div>
                     ))}
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-amber-800/20">
-                    <h3 className="text-lg font-semibold text-amber-800/80 mb-4">Play with Friends</h3>
+                <div className="mt-8 pt-6 border-t border-white/10">
+                    <h3 className="text-lg font-semibold text-slate-400 mb-4">Play with Friends</h3>
                     {!inviteLink ? (
                          <button 
                             onClick={generateInviteLink} 
                             disabled={isGenerating}
-                            className="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500/50 border-b-4 border-blue-800 active:scale-95 disabled:opacity-70"
+                            className="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500/30 border-b-4 border-blue-800 active:scale-95 disabled:opacity-70"
                          >
                             {isGenerating ? 'Creating Room...' : 'Start Online Game & Invite'}
                         </button>
@@ -140,10 +140,10 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSave, currentSet
                                 type="text"
                                 readOnly
                                 value={inviteLink}
-                                className="w-full bg-white border-2 border-amber-800/20 rounded-lg px-4 py-2 text-gray-600 text-center font-mono text-sm"
+                                className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-slate-300 text-center font-mono text-sm"
                             />
                             <div className="grid grid-cols-2 gap-3">
-                                <button onClick={copyLink} className="col-span-2 px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition-colors focus:outline-none focus:ring-4 focus:ring-gray-500/50 border-b-4 border-gray-700 active:scale-95 disabled:opacity-70" disabled={copied}>
+                                <button onClick={copyLink} className="col-span-2 px-4 py-2 bg-slate-700 text-white font-bold rounded-lg hover:bg-slate-600 transition-colors focus:outline-none focus:ring-4 focus:ring-slate-600/50 border-b-4 border-slate-900 active:scale-95 disabled:opacity-70" disabled={copied}>
                                     {copied ? 'Copied!' : 'Copy Link'}
                                 </button>
                                 <button onClick={shareOnFacebook} className="px-3 py-2 bg-[#1877F2] text-white font-bold rounded-lg hover:bg-[#166fe5] transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500/50 border-b-4 border-[#0e5cad] active:scale-95 text-sm">
@@ -153,7 +153,7 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSave, currentSet
                                     Messenger
                                 </button>
                             </div>
-                            <p className="text-xs text-center text-amber-800/60">You are now hosting an online session.</p>
+                            <p className="text-xs text-center text-slate-500">You are now hosting an online session.</p>
                         </div>
                     )}
                 </div>
@@ -161,13 +161,13 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSave, currentSet
                 <div className="mt-10 flex justify-end gap-4">
                     <button
                         onClick={onClose}
-                        className="px-6 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition-colors focus:outline-none focus:ring-4 focus:ring-gray-500/50 border-b-4 border-gray-700 active:scale-95"
+                        className="px-6 py-2 bg-slate-700 text-white font-bold rounded-lg hover:bg-slate-600 transition-colors focus:outline-none focus:ring-4 focus:ring-slate-600/50 border-b-4 border-slate-900 active:scale-95"
                     >
                         Close
                     </button>
                     <button
                         onClick={handleSave}
-                        className="px-6 py-2 bg-amber-600 text-white font-bold rounded-lg hover:bg-amber-700 transition-colors focus:outline-none focus:ring-4 focus:ring-amber-500/50 border-b-4 border-amber-800 active:scale-95"
+                        className="px-6 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-colors focus:outline-none focus:ring-4 focus:ring-emerald-500/50 border-b-4 border-emerald-800 active:scale-95"
                     >
                         Save
                     </button>
