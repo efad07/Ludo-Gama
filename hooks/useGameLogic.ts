@@ -1,6 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
+
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { GameState, PlayerColor, Piece, GameStatus, PieceStatus } from '../types';
 import { PLAYER_COLORS, START_POSITIONS, SAFE_SPOTS } from '../constants';
+import Peer, { DataConnection } from 'peerjs';
 
 const createInitialState = (playerNames: Record<PlayerColor, string>): GameState => {
     const pieces: Record<string, Piece> = {};
@@ -32,15 +34,173 @@ const createInitialState = (playerNames: Record<PlayerColor, string>): GameState
         isRolling: false,
         lastDiceValue: null,
         lastPlayerRolled: null,
+        
+        // Online Initial State
+        isOnline: false,
+        myColor: null,
+        roomId: null,
+        onlineStatus: 'offline'
     };
 };
+
+// Simple random ID generator for rooms
+const generateRoomId = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
 export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
     const [gameState, setGameState] = useState<GameState>(() => createInitialState(playerNames));
     
+    // Refs for PeerJS
+    const peerRef = useRef<Peer | null>(null);
+    const connRef = useRef<DataConnection | null>(null);
+    const isHostRef = useRef<boolean>(false);
+
+    // --- Online Multiplayer Logic ---
+
+    // Initialize Online Game (Called by Settings -> Invite)
+    const initializeHost = useCallback(async (): Promise<string> => {
+        if (peerRef.current) peerRef.current.destroy();
+
+        const roomId = generateRoomId();
+        const peer = new Peer(roomId); // We try to use the RoomID as the PeerID for simplicity
+        
+        return new Promise((resolve, reject) => {
+            peer.on('open', (id) => {
+                peerRef.current = peer;
+                isHostRef.current = true;
+                
+                setGameState(prev => ({
+                    ...prev,
+                    isOnline: true,
+                    myColor: 'red', // Host is always Red
+                    roomId: id,
+                    onlineStatus: 'connecting',
+                    message: 'Waiting for friend to join...'
+                }));
+
+                peer.on('connection', (conn) => {
+                    connRef.current = conn;
+                    
+                    conn.on('open', () => {
+                        // Connection established! Send current state to guest
+                        setGameState(prev => {
+                           const newState = { 
+                               ...prev, 
+                               onlineStatus: 'connected' as const, 
+                               message: 'Friend joined! Game starting.' 
+                           };
+                           // Send full state immediately
+                           conn.send({ type: 'SYNC_STATE', payload: newState });
+                           return newState;
+                        });
+                    });
+
+                    conn.on('data', (data: any) => {
+                        handleRemoteData(data);
+                    });
+                    
+                    conn.on('close', () => {
+                         setGameState(prev => ({ ...prev, onlineStatus: 'error', message: 'Friend disconnected.' }));
+                    });
+                });
+
+                resolve(id);
+            });
+
+            peer.on('error', (err) => {
+                console.error("Peer Error:", err);
+                setGameState(prev => ({ ...prev, onlineStatus: 'error', message: 'Connection failed. Try again.' }));
+                reject(err);
+            });
+        });
+    }, []);
+
+    // Join Online Game (Called on mount if URL has ?room=)
     useEffect(() => {
-        // Reset game if player names change from settings
-        setGameState(createInitialState(playerNames));
+        const params = new URLSearchParams(window.location.search);
+        const roomIdFromUrl = params.get('room');
+
+        if (roomIdFromUrl && !peerRef.current) {
+             // We are the Guest
+             const peer = new Peer();
+             peerRef.current = peer;
+             isHostRef.current = false;
+
+             peer.on('open', () => {
+                setGameState(prev => ({
+                    ...prev,
+                    isOnline: true,
+                    myColor: 'green', // Guest is Green (for 2 player default)
+                    roomId: roomIdFromUrl,
+                    onlineStatus: 'connecting',
+                    message: 'Connecting to host...'
+                }));
+
+                const conn = peer.connect(roomIdFromUrl);
+                connRef.current = conn;
+
+                conn.on('open', () => {
+                    setGameState(prev => ({ ...prev, onlineStatus: 'connected', message: 'Connected!' }));
+                    // Request state or just wait for Host to send it
+                });
+
+                conn.on('data', (data: any) => {
+                    handleRemoteData(data);
+                });
+                
+                conn.on('error', () => {
+                     setGameState(prev => ({ ...prev, onlineStatus: 'error', message: 'Could not connect to room.' }));
+                });
+             });
+        }
+        
+        return () => {
+            // Cleanup on unmount is tricky with strict mode double-mount, 
+            // usually we want to keep connection alive if possible, but for safety:
+            // peerRef.current?.destroy(); 
+        };
+    }, []);
+
+    // Handle incoming data from Peer
+    const handleRemoteData = (data: any) => {
+        if (data.type === 'SYNC_STATE') {
+            setGameState(prev => {
+                // Merge remote state but keep our local identity (myColor)
+                return {
+                    ...data.payload,
+                    myColor: prev.myColor, 
+                    isOnline: true,
+                    onlineStatus: 'connected'
+                };
+            });
+        } else if (data.type === 'ACTION_UPDATE') {
+             // Receive specific update (like roll or move)
+             setGameState(prev => {
+                 const newState = {
+                     ...prev,
+                     ...data.payload,
+                     myColor: prev.myColor // Persist identity
+                 };
+                 return newState;
+             });
+        }
+    };
+
+    // Broadcast state changes
+    const broadcastState = (newState: GameState) => {
+        if (connRef.current && connRef.current.open) {
+            // We send the whole state for simplicity to ensure sync
+            // But we strip out local-only fields if necessary.
+            connRef.current.send({ type: 'ACTION_UPDATE', payload: newState });
+        }
+    };
+
+    // --- Core Logic ---
+
+    useEffect(() => {
+        // Reset game if player names change from settings (Only if offline)
+        if (!gameState.isOnline) {
+            setGameState(createInitialState(playerNames));
+        }
     }, [playerNames]);
 
 
@@ -64,7 +224,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
             const startPos = START_POSITIONS[playerColor];
             
             // Check if the start position is blocked by an opponent's block (2 or more pieces).
-            const piecesAtStart = Object.values(allPieces).filter(p => p.position === startPos && p.color !== playerColor);
+            const piecesAtStart = (Object.values(allPieces) as Piece[]).filter(p => p.position === startPos && p.color !== playerColor);
             if (piecesAtStart.length >= 2) {
                 const colorCounts = piecesAtStart.reduce((acc, p) => {
                     acc[p.color] = (acc[p.color] || 0) + 1;
@@ -76,7 +236,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
             }
             
             // Check if we already have 4 pieces at start (full stack)
-            const myPiecesAtStart = Object.values(allPieces).filter(p => p.position === startPos && p.color === playerColor);
+            const myPiecesAtStart = (Object.values(allPieces) as Piece[]).filter(p => p.position === startPos && p.color === playerColor);
             if (myPiecesAtStart.length >= 4) {
                 return null; // Cannot add a 5th piece
             }
@@ -120,7 +280,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
             if (pos >= 52 && pos <= 57) continue; // No blocks in the home path.
             
             // Check for opponent blocks
-            const opponentPiecesOnSquare = Object.values(allPieces).filter(p => p.position === pos && p.color !== playerColor);
+            const opponentPiecesOnSquare = (Object.values(allPieces) as Piece[]).filter(p => p.position === pos && p.color !== playerColor);
             if (opponentPiecesOnSquare.length >= 2) {
                 const colorCounts = opponentPiecesOnSquare.reduce((acc, p) => {
                     acc[p.color] = (acc[p.color] || 0) + 1;
@@ -133,7 +293,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
             }
 
             // Check for self blocks (stacking)
-            const selfPiecesOnSquare = Object.values(allPieces).filter(p => p.position === pos && p.color === playerColor);
+            const selfPiecesOnSquare = (Object.values(allPieces) as Piece[]).filter(p => p.position === pos && p.color === playerColor);
             
             if (isDestination) {
                 // If it's the destination, we allow stacking up to 4 pieces.
@@ -150,7 +310,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
 
         // 4. Check if landing on a safe square occupied by an opponent
         if (newStatus === 'active' && finalPosition < 52 && SAFE_SPOTS.includes(finalPosition)) {
-            const piecesAtDest = Object.values(allPieces).filter(p => p.position === finalPosition && p.color !== playerColor);
+            const piecesAtDest = (Object.values(allPieces) as Piece[]).filter(p => p.position === finalPosition && p.color !== playerColor);
             if (piecesAtDest.length > 0) {
                 return null; // Cannot land on a safe square occupied by an opponent.
             }
@@ -160,7 +320,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
     }, []);
     
     const findMovablePieces = useCallback((player: PlayerColor, dice: number, pieces: Record<string, Piece>): string[] => {
-        return Object.values(pieces)
+        return (Object.values(pieces) as Piece[])
             .filter(p => p.color === player && p.status !== 'home')
             .filter(p => calculateNewPosition(p, dice, player, pieces) !== null)
             .map(p => p.id);
@@ -168,6 +328,9 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
 
     const handlePieceMove = useCallback((pieceId: string) => {
         setGameState(prev => {
+            // Online Protection: Prevent moving if not your turn or not your color
+            if (prev.isOnline && prev.currentPlayer !== prev.myColor) return prev;
+
             if (prev.status !== 'waiting-for-move' || !prev.movablePieces.includes(pieceId) || !prev.diceValue) {
                 return prev;
             }
@@ -180,7 +343,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
 
             const newPieces = { ...pieces };
 
-            const opponentsAtDestination = Object.values(pieces).filter(p => 
+            const opponentsAtDestination = (Object.values(pieces) as Piece[]).filter((p) => 
                 p.position === moveResult.position && p.color !== currentPlayer
             );
             
@@ -207,8 +370,10 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                 message = `${playerNames[currentPlayer]} got a piece home! Roll again.`;
             }
             
+            let newState = { ...prev };
+
             if (checkForWinner(newPieces, currentPlayer)) {
-                return {
+                newState = {
                     ...prev,
                     pieces: newPieces,
                     winner: currentPlayer,
@@ -218,20 +383,18 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                     lastPlayerRolled: currentPlayer,
                     diceValue: null,
                 };
-            }
-
-            if (turnContinues) {
-                return {
+            } else if (turnContinues) {
+                newState = {
                     ...prev,
                     pieces: newPieces,
                     status: 'waiting-for-roll',
-                    diceValue: null, // Player will roll again, clear current value
+                    diceValue: null,
                     message: message || `${playerNames[currentPlayer]}, roll again!`,
                     movablePieces: []
                 };
             } else {
                 const nextPlayer = getNextPlayer(currentPlayer);
-                return {
+                newState = {
                     ...prev,
                     pieces: newPieces,
                     currentPlayer: nextPlayer,
@@ -244,13 +407,23 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                     movablePieces: []
                 };
             }
+            
+            if (newState.isOnline) broadcastState(newState);
+            return newState;
         });
     }, [calculateNewPosition, checkForWinner, getNextPlayer, playerNames]);
     
     const handleRollDice = useCallback(() => {
+        if (gameState.isOnline && gameState.currentPlayer !== gameState.myColor) {
+            console.log("Not your turn!");
+            return; // Prevent rolling if it's not your turn online
+        }
+
         setGameState(prev => {
             if (prev.status !== 'waiting-for-roll' || prev.winner || prev.isRolling) return prev;
-            return { ...prev, isRolling: true, lastDiceValue: null, lastPlayerRolled: null };
+            const newState = { ...prev, isRolling: true, lastDiceValue: null, lastPlayerRolled: null };
+            if (prev.isOnline) broadcastState(newState);
+            return newState;
         });
 
         const roll = Math.floor(Math.random() * 6) + 1;
@@ -258,6 +431,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
         setTimeout(() => {
             setGameState(currentState => {
                 let currentSixStreak = currentState.sixStreak;
+                let newState = { ...currentState };
                 
                 if (roll === 6) {
                     currentSixStreak++;
@@ -266,7 +440,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                              setGameState(s => {
                                 if (s.currentPlayer !== currentState.currentPlayer) return s;
                                 const nextPlayer = getNextPlayer(currentState.currentPlayer);
-                                return {
+                                const skippedState = {
                                     ...s,
                                     currentPlayer: nextPlayer,
                                     diceValue: null,
@@ -276,15 +450,20 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                                     message: `${playerNames[nextPlayer]}, roll the dice!`,
                                     sixStreak: 0,
                                 };
+                                if (s.isOnline) broadcastState(skippedState);
+                                return skippedState;
                             });
                         }, 1000);
-                        return {
+                        
+                        newState = {
                             ...currentState,
                             diceValue: roll,
                             isRolling: false,
                             sixStreak: 0,
                             message: `Oops! Three 6s. ${playerNames[currentState.currentPlayer]}'s turn is skipped.`
                         };
+                        if (currentState.isOnline) broadcastState(newState);
+                        return newState;
                     }
                 } else {
                     currentSixStreak = 0;
@@ -296,7 +475,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                      const message = movable.length === 1 
                         ? `Only one move. Moving automatically...` 
                         : `${playerNames[currentState.currentPlayer]}, select a piece to move.`;
-                    return {
+                    newState = {
                         ...currentState,
                         diceValue: roll,
                         isRolling: false,
@@ -311,7 +490,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                             setGameState(s => {
                                 if (s.currentPlayer !== currentState.currentPlayer) return s;
                                 const nextPlayer = getNextPlayer(currentState.currentPlayer);
-                                return {
+                                const nextTurnState = {
                                     ...s,
                                     currentPlayer: nextPlayer,
                                     diceValue: null,
@@ -321,11 +500,13 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                                     message: `${playerNames[nextPlayer]}, roll the dice!`,
                                     sixStreak: 0,
                                 };
+                                if (s.isOnline) broadcastState(nextTurnState);
+                                return nextTurnState;
                             });
                         }, 1000);
                     }
                      
-                    return {
+                    newState = {
                         ...currentState,
                         diceValue: roll,
                         isRolling: false,
@@ -334,23 +515,31 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                         sixStreak: currentSixStreak,
                     };
                 }
+                
+                if (currentState.isOnline) broadcastState(newState);
+                return newState;
             });
         }, 1000);
-    }, [playerNames, findMovablePieces, getNextPlayer]);
+    }, [playerNames, findMovablePieces, getNextPlayer, gameState.isOnline, gameState.currentPlayer, gameState.myColor]);
 
     useEffect(() => {
+        // Auto-move logic remains, but checked against `myColor` in `handlePieceMove`
         if (gameState.status === 'waiting-for-move' && gameState.movablePieces.length === 1 && !gameState.winner) {
-            const timer = setTimeout(() => {
-                handlePieceMove(gameState.movablePieces[0]);
-            }, 1200);
-
-            return () => clearTimeout(timer);
+            // Only the player controlling this color should trigger the auto-move online
+            if (!gameState.isOnline || gameState.currentPlayer === gameState.myColor) {
+                const timer = setTimeout(() => {
+                    handlePieceMove(gameState.movablePieces[0]);
+                }, 1200);
+                return () => clearTimeout(timer);
+            }
         }
-    }, [gameState.status, gameState.movablePieces, gameState.winner, handlePieceMove]);
+    }, [gameState.status, gameState.movablePieces, gameState.winner, handlePieceMove, gameState.isOnline, gameState.currentPlayer, gameState.myColor]);
 
     const handleResetGame = useCallback(() => {
-        setGameState(createInitialState(playerNames));
-    }, [playerNames]);
+        const newState = createInitialState(playerNames);
+        setGameState(newState);
+        if (gameState.isOnline) broadcastState(newState);
+    }, [playerNames, gameState.isOnline]);
 
-    return { gameState, handleRollDice, handlePieceMove, handleResetGame };
+    return { gameState, handleRollDice, handlePieceMove, handleResetGame, initializeHost };
 };

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Board from './components/Board';
 import Settings from './components/Settings';
@@ -22,7 +23,7 @@ const App: React.FC = () => {
         },
     });
 
-    const { gameState, handleRollDice, handlePieceMove, handleResetGame } = useGameLogic(gameSettings.playerNames);
+    const { gameState, handleRollDice, handlePieceMove, handleResetGame, initializeHost } = useGameLogic(gameSettings.playerNames);
 
     const handleSaveSettings = (newSettings: GameSettings) => {
         setGameSettings(newSettings);
@@ -31,17 +32,27 @@ const App: React.FC = () => {
 
     return (
         <AudioProvider gameState={gameState} isAssistantVisible={isAssistantVisible}>
-            <main className="w-screen h-screen flex flex-col justify-center items-center p-2 sm:p-4 text-white overflow-hidden">
+            <main className="w-screen h-screen flex flex-col justify-center items-center p-4 text-white overflow-hidden relative">
                  <GameMenu
                     onOpenRules={() => setIsRulesOpen(true)}
                     onOpenSettings={() => setIsSettingsOpen(true)}
                     onResetGame={handleResetGame}
                     isAssistantVisible={isAssistantVisible}
                     onToggleAssistant={() => setIsAssistantVisible(v => !v)}
+                    isOnline={gameState.isOnline}
+                    roomId={gameState.roomId}
+                    onlineStatus={gameState.onlineStatus}
                 />
-                <div className="flex flex-col justify-center items-center w-full max-w-[800px] mx-auto gap-2">
+                
+                {/* Decorative background elements */}
+                <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
+                    <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-blue-500/10 rounded-full blur-[100px]"></div>
+                    <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-purple-500/10 rounded-full blur-[100px]"></div>
+                </div>
+
+                <div className="flex flex-col justify-center items-center w-full max-w-[800px] mx-auto gap-4 z-10">
                     {/* Top Players */}
-                    <div className="flex justify-between items-center w-full">
+                    <div className="flex justify-between items-center w-full gap-4">
                         {(['red', 'green'] as PlayerColor[]).map((color) => (
                             <PlayerInfo
                                 key={color}
@@ -60,7 +71,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Board */}
-                    <div className="w-full max-w-[600px] aspect-square">
+                    <div className="w-full max-w-[500px] aspect-square animate-float">
                         <Board 
                             pieces={Object.values(gameState.pieces)}
                             onPieceClick={handlePieceMove}
@@ -69,7 +80,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Bottom Players */}
-                    <div className="flex justify-between items-center w-full">
+                    <div className="flex justify-between items-center w-full gap-4">
                          {(['blue', 'yellow'] as PlayerColor[]).map((color) => (
                             <PlayerInfo
                                 key={color}
@@ -89,24 +100,35 @@ const App: React.FC = () => {
                 </div>
                 
                 {/* Footer / Message Bar */}
-                <footer className="absolute bottom-0 left-0 right-0 p-2 text-center">
-                     <div className="bg-[#4a3f3f]/80 backdrop-blur-sm text-amber-50 font-semibold rounded-lg px-4 py-2 inline-block shadow-lg border border-amber-800/20">
-                        <p>{gameState.message}</p>
+                <footer className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-20">
+                     <div className="glass-panel bg-black/60 px-8 py-3 rounded-full shadow-[0_0_20px_rgba(0,0,0,0.5)] border border-white/10 flex items-center gap-2 backdrop-blur-xl">
+                        <div className={`w-2 h-2 rounded-full animate-pulse ${gameState.isOnline ? 'bg-blue-400 shadow-[0_0_10px_#60a5fa]' : 'bg-green-400'}`}></div>
+                        <p className="text-white/90 font-medium tracking-wide text-sm sm:text-base">
+                            {gameState.isOnline && gameState.myColor ? `(You are ${gameState.myColor}) ` : ''}
+                            {gameState.message}
+                        </p>
                     </div>
                 </footer>
 
                 {/* Winner Overlay */}
                 {gameState.winner && (
-                    <div className="absolute inset-0 bg-black/70 backdrop-blur-md flex flex-col justify-center items-center z-50">
-                        <h2 className="text-5xl sm:text-7xl font-bold mb-4" style={{ color: PLAYER_CONFIG[gameState.winner].primary }}>
-                            {gameState.players[gameState.winner].name} Wins!
-                        </h2>
-                        <button
-                            onClick={handleResetGame}
-                            className="mt-4 px-8 py-4 bg-amber-600 text-white font-bold text-xl rounded-lg hover:bg-amber-700 transition-colors focus:outline-none focus:ring-4 focus:ring-amber-500/50 border-b-4 border-amber-800 active:scale-95"
-                        >
-                            Play Again
-                        </button>
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-xl flex flex-col justify-center items-center z-50 animate-scale-in">
+                        <div className="text-center space-y-6 p-8 border border-white/10 rounded-3xl bg-white/5 shadow-2xl">
+                            <h2 className="text-6xl sm:text-8xl font-black mb-4 tracking-tighter" style={{ 
+                                color: PLAYER_CONFIG[gameState.winner].primary,
+                                textShadow: `0 0 30px ${PLAYER_CONFIG[gameState.winner].primary}`
+                            }}>
+                                {gameState.players[gameState.winner].name}
+                            </h2>
+                            <p className="text-2xl text-white/80 uppercase tracking-widest">Victory Achieved</p>
+                            
+                            <button
+                                onClick={handleResetGame}
+                                className="mt-8 px-10 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-xl rounded-xl hover:scale-105 transition-transform focus:outline-none shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+                            >
+                                Play Again
+                            </button>
+                        </div>
                     </div>
                 )}
                 
@@ -115,6 +137,7 @@ const App: React.FC = () => {
                     onClose={() => setIsSettingsOpen(false)} 
                     onSave={handleSaveSettings}
                     currentSettings={gameSettings}
+                    onInitializeHost={initializeHost}
                 />
 
                 <Rules 

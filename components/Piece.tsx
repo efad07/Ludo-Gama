@@ -12,7 +12,7 @@ interface PieceProps {
 
 const PieceComponent: React.FC<PieceProps> = ({ piece, isMovable, onClick, style, scale }) => {
     const config = PLAYER_CONFIG[piece.color];
-    const pieceSize = 'w-[6%] h-[6%]';
+    const pieceSize = 'w-[5.5%] h-[5.5%]'; // Slightly smaller to allow glow
     
     const handleClick = () => {
         if (isMovable) {
@@ -22,25 +22,32 @@ const PieceComponent: React.FC<PieceProps> = ({ piece, isMovable, onClick, style
 
     return (
         <div
-            className={`absolute ${pieceSize} rounded-full flex items-center justify-center -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-in-out transform ${isMovable ? 'hover:scale-110 hover:z-50' : 'z-10'}`}
+            className={`absolute ${pieceSize} flex items-center justify-center -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ease-out transform ${isMovable ? 'hover:scale-110 hover:z-50 cursor-pointer' : 'z-10 cursor-default'}`}
             style={{
                 ...style,
-                cursor: isMovable ? 'pointer' : 'default',
                 transform: `translate(-50%, -50%) scale(${scale})`,
-                // Ensure movable pieces are always on top if stacked
                 zIndex: isMovable ? 30 : 10
             }}
             onClick={handleClick}
         >
+            {/* Outer Glow / Halo for Movable Pieces */}
+            {isMovable && (
+                <div 
+                    className="absolute w-full h-full rounded-full animate-ping opacity-75"
+                    style={{ backgroundColor: config.primary }}
+                ></div>
+            )}
+            
+            {/* The Piece Orb */}
              <div 
-                className={`relative w-full h-full rounded-full transition-all duration-200 flex items-center justify-center text-white font-bold ${isMovable ? 'piece-movable-animate' : ''}`}
+                className={`relative w-full h-full rounded-full transition-all duration-200 shadow-lg ${isMovable ? 'piece-movable-animate' : ''}`}
                 style={{
-                    backgroundColor: config.primary,
-                    backgroundImage: `radial-gradient(circle at 30% 25%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 50%)`,
-                    boxShadow: 'inset 0 -3px 4px rgba(0,0,0,0.3), 0 4px 6px rgba(0,0,0,0.2)',
-                    border: '1px solid rgba(0,0,0,0.2)'
+                    background: `radial-gradient(circle at 30% 30%, #ffffff 0%, ${config.primary} 60%, #000000 100%)`,
+                    boxShadow: `0 0 10px ${config.primary}, inset 0 0 5px rgba(0,0,0,0.5)`
                 }}
             >
+                {/* Specular highlight */}
+                <div className="absolute top-[15%] left-[15%] w-[25%] h-[25%] bg-white rounded-full blur-[1px] opacity-80"></div>
             </div>
         </div>
     );

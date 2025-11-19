@@ -130,15 +130,25 @@ export const AudioProvider: React.FC<{ gameState: GameState; children: React.Rea
         setErrorMessage(null);
     
         try {
-            const apiKey = process.env.API_KEY;
-            if (!apiKey) throw new Error("API Key missing.");
-            if (!navigator.mediaDevices?.getUserMedia) throw new Error('Microphone not supported.');
+            let apiKey = '';
+            try {
+                apiKey = process.env.API_KEY || '';
+            } catch (e) {
+                console.error("Environment access error:", e);
+            }
+            
+            if (!apiKey) throw new Error("API Key configuration missing.");
+            if (!navigator.mediaDevices?.getUserMedia) throw new Error('Microphone not supported in this browser.');
+            
             const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-            if (!AudioContextClass) throw new Error('Web Audio not supported.');
+            if (!AudioContextClass) throw new Error('Web Audio API not supported.');
 
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // Create contexts after permission granted
             const outputCtx = new AudioContextClass({ sampleRate: 24000 });
             const inputCtx = new AudioContextClass({ sampleRate: 16000 });
+            
             await Promise.all([outputCtx.resume(), inputCtx.resume()]);
             
             const ai = new GoogleGenAI({ apiKey });
@@ -146,22 +156,26 @@ export const AudioProvider: React.FC<{ gameState: GameState; children: React.Rea
                 model: 'gemini-2.5-flash-native-audio-preview-09-2025',
                 callbacks: {
                     onopen: () => {
-                        const source = inputCtx.createMediaStreamSource(stream);
-                        const processor = inputCtx.createScriptProcessor(4096, 1, 1);
-                        
-                        processor.onaudioprocess = (event) => {
-                            const inputData = event.inputBuffer.getChannelData(0);
-                            sessionRef.current?.sendRealtimeInput({ media: createBlob(inputData) });
-                        };
+                        try {
+                            const source = inputCtx.createMediaStreamSource(stream);
+                            const processor = inputCtx.createScriptProcessor(4096, 1, 1);
+                            
+                            processor.onaudioprocess = (event) => {
+                                const inputData = event.inputBuffer.getChannelData(0);
+                                sessionRef.current?.sendRealtimeInput({ media: createBlob(inputData) });
+                            };
 
-                        source.connect(processor);
-                        processor.connect(inputCtx.destination);
-                        
-                        resourcesRef.current = { stream, inputCtx, outputCtx, processor, source };
-                        setStatus('connected');
-                        setIsListening(true);
-                        // Add greeting or instructions if empty
-                        setTranscripts(prev => prev.length === 0 ? [{author: 'model', text: "Hi! I'm your Game Assistant. Tap your mic to chat!"}] : prev);
+                            source.connect(processor);
+                            processor.connect(inputCtx.destination);
+                            
+                            resourcesRef.current = { stream, inputCtx, outputCtx, processor, source };
+                            setStatus('connected');
+                            setIsListening(true);
+                            // Add greeting or instructions if empty
+                            setTranscripts(prev => prev.length === 0 ? [{author: 'model', text: "Hi! I'm your Game Assistant. Tap your mic to chat!"}] : prev);
+                        } catch(e) {
+                            handleConnectionError(e);
+                        }
                     },
                     onmessage: async (message: LiveServerMessage) => {
                         if (message.serverContent?.outputTranscription) currentOutputRef.current += message.serverContent.outputTranscription.text;

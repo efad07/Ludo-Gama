@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { GameSettings, PlayerColor } from '../types';
 import { PLAYER_COLORS, PLAYER_CONFIG } from '../constants';
@@ -7,12 +8,14 @@ interface SettingsProps {
     onClose: () => void;
     onSave: (settings: GameSettings) => void;
     currentSettings: GameSettings;
+    onInitializeHost: () => Promise<string>;
 }
 
-const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSave, currentSettings }) => {
+const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSave, currentSettings, onInitializeHost }) => {
     const [settings, setSettings] = useState<GameSettings>(currentSettings);
     const [inviteLink, setInviteLink] = useState('');
     const [copied, setCopied] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     useEffect(() => {
         setSettings(currentSettings);
@@ -20,6 +23,7 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSave, currentSet
           // Reset invite link state when modal is closed
           setInviteLink('');
           setCopied(false);
+          setIsGenerating(false);
         }
     }, [currentSettings, isOpen]);
 
@@ -41,10 +45,22 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSave, currentSet
         onSave(settings);
     };
 
-    const generateInviteLink = () => {
-        const newLink = `https://ludo-world.game/invite/${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-        setInviteLink(newLink);
-        setCopied(false);
+    const generateInviteLink = async () => {
+        setIsGenerating(true);
+        try {
+            const roomId = await onInitializeHost();
+            // Use the actual current URL of the application
+            const baseUrl = window.location.origin + window.location.pathname;
+            const newLink = `${baseUrl}?room=${roomId}`;
+            
+            setInviteLink(newLink);
+            setCopied(false);
+        } catch (error) {
+            console.error("Failed to generate link", error);
+            alert("Could not start online session. Please try again.");
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const copyLink = () => {
@@ -59,6 +75,30 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSave, currentSet
         if (!inviteLink) return;
         const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(inviteLink)}&quote=${encodeURIComponent("Come play Ludo with me on Ludo World!")}`;
         window.open(url, '_blank', 'noopener,noreferrer');
+    };
+
+    const shareOnMessenger = () => {
+        if (!inviteLink) return;
+
+        // 1. Try Web Share API (Best for Mobile - Native Share Sheet)
+        if (navigator.share) {
+            navigator.share({
+                title: 'Join my Ludo Game',
+                text: 'Come play Ludo with me on Ludo World!',
+                url: inviteLink,
+            }).catch((error) => console.log('Error sharing', error));
+        } else {
+             // 2. Fallback for Mobile Devices (Deep Link to Messenger App)
+             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+             if (isMobile) {
+                  // This deep link attempts to open the Messenger app directly with the link
+                  window.location.href = `fb-messenger://share/?link=${encodeURIComponent(inviteLink)}`;
+             } else {
+                  // 3. Desktop Fallback
+                  copyLink();
+                  alert("Link copied! Paste it into your Messenger chat.");
+             }
+        }
     };
 
     return (
@@ -87,8 +127,12 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSave, currentSet
                 <div className="mt-8 pt-6 border-t border-amber-800/20">
                     <h3 className="text-lg font-semibold text-amber-800/80 mb-4">Play with Friends</h3>
                     {!inviteLink ? (
-                         <button onClick={generateInviteLink} className="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500/50 border-b-4 border-blue-800 active:scale-95">
-                            Invite Friends
+                         <button 
+                            onClick={generateInviteLink} 
+                            disabled={isGenerating}
+                            className="w-full px-6 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500/50 border-b-4 border-blue-800 active:scale-95 disabled:opacity-70"
+                         >
+                            {isGenerating ? 'Creating Room...' : 'Start Online Game & Invite'}
                         </button>
                     ) : (
                         <div className="space-y-4">
@@ -96,16 +140,20 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSave, currentSet
                                 type="text"
                                 readOnly
                                 value={inviteLink}
-                                className="w-full bg-white border-2 border-amber-800/20 rounded-lg px-4 py-2 text-gray-600 text-center font-mono"
+                                className="w-full bg-white border-2 border-amber-800/20 rounded-lg px-4 py-2 text-gray-600 text-center font-mono text-sm"
                             />
-                            <div className="flex gap-3 justify-center">
-                                <button onClick={copyLink} className="flex-1 px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition-colors focus:outline-none focus:ring-4 focus:ring-gray-500/50 border-b-4 border-gray-700 active:scale-95 disabled:opacity-70" disabled={copied}>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button onClick={copyLink} className="col-span-2 px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition-colors focus:outline-none focus:ring-4 focus:ring-gray-500/50 border-b-4 border-gray-700 active:scale-95 disabled:opacity-70" disabled={copied}>
                                     {copied ? 'Copied!' : 'Copy Link'}
                                 </button>
-                                 <button onClick={shareOnFacebook} className="flex-1 px-4 py-2 bg-[#1877F2] text-white font-bold rounded-lg hover:bg-[#166fe5] transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500/50 border-b-4 border-[#0e5cad] active:scale-95">
-                                    Share on Facebook
+                                <button onClick={shareOnFacebook} className="px-3 py-2 bg-[#1877F2] text-white font-bold rounded-lg hover:bg-[#166fe5] transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500/50 border-b-4 border-[#0e5cad] active:scale-95 text-sm">
+                                    Facebook
+                                </button>
+                                <button onClick={shareOnMessenger} className="px-3 py-2 bg-gradient-to-r from-[#00B2FF] to-[#006AFF] text-white font-bold rounded-lg hover:brightness-110 transition-all focus:outline-none focus:ring-4 focus:ring-cyan-500/50 border-b-4 border-[#004CBE] active:scale-95 text-sm">
+                                    Messenger
                                 </button>
                             </div>
+                            <p className="text-xs text-center text-amber-800/60">You are now hosting an online session.</p>
                         </div>
                     )}
                 </div>
@@ -115,7 +163,7 @@ const Settings: React.FC<SettingsProps> = ({ isOpen, onClose, onSave, currentSet
                         onClick={onClose}
                         className="px-6 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition-colors focus:outline-none focus:ring-4 focus:ring-gray-500/50 border-b-4 border-gray-700 active:scale-95"
                     >
-                        Cancel
+                        Close
                     </button>
                     <button
                         onClick={handleSave}

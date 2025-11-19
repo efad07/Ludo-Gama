@@ -10,62 +10,20 @@ const DiceFace: React.FC<{ face: number; dotSize: number }> = ({ face, dotSize }
     const dotStyle: React.CSSProperties = {
         width: `${dotSize}px`,
         height: `${dotSize}px`,
-        backgroundColor: '#382e2e', // Dark wood color
+        backgroundColor: '#00f0ff', // Cyan neon dots
         borderRadius: '50%',
-        boxShadow: 'inset 0 0 2px rgba(0,0,0,0.3)',
+        boxShadow: '0 0 5px #00f0ff, 0 0 10px #00f0ff', // Glowing dots
     };
     
     const renderDots = () => {
         switch (face) {
-            case 1:
-                return <span style={dotStyle} className="col-start-2 row-start-2"></span>;
-            case 2:
-                return (
-                    <>
-                        <span style={dotStyle} className="col-start-1 row-start-1"></span>
-                        <span style={dotStyle} className="col-start-3 row-start-3"></span>
-                    </>
-                );
-            case 3:
-                return (
-                    <>
-                        <span style={dotStyle} className="col-start-1 row-start-1"></span>
-                        <span style={dotStyle} className="col-start-2 row-start-2"></span>
-                        <span style={dotStyle} className="col-start-3 row-start-3"></span>
-                    </>
-                );
-            case 4:
-                return (
-                    <>
-                        <span style={dotStyle} className="col-start-1 row-start-1"></span>
-                        <span style={dotStyle} className="col-start-3 row-start-1"></span>
-                        <span style={dotStyle} className="col-start-1 row-start-3"></span>
-                        <span style={dotStyle} className="col-start-3 row-start-3"></span>
-                    </>
-                );
-            case 5:
-                return (
-                    <>
-                        <span style={dotStyle} className="col-start-1 row-start-1"></span>
-                        <span style={dotStyle} className="col-start-3 row-start-1"></span>
-                        <span style={dotStyle} className="col-start-2 row-start-2"></span>
-                        <span style={dotStyle} className="col-start-1 row-start-3"></span>
-                        <span style={dotStyle} className="col-start-3 row-start-3"></span>
-                    </>
-                );
-            case 6:
-                return (
-                    <>
-                        <span style={dotStyle} className="col-start-1 row-start-1"></span>
-                        <span style={dotStyle} className="col-start-3 row-start-1"></span>
-                        <span style={dotStyle} className="col-start-1 row-start-2"></span>
-                        <span style={dotStyle} className="col-start-3 row-start-2"></span>
-                        <span style={dotStyle} className="col-start-1 row-start-3"></span>
-                        <span style={dotStyle} className="col-start-3 row-start-3"></span>
-                    </>
-                );
-            default:
-                return null;
+            case 1: return <span style={dotStyle} className="col-start-2 row-start-2"></span>;
+            case 2: return <><span style={dotStyle} className="col-start-1 row-start-1"></span><span style={dotStyle} className="col-start-3 row-start-3"></span></>;
+            case 3: return <><span style={dotStyle} className="col-start-1 row-start-1"></span><span style={dotStyle} className="col-start-2 row-start-2"></span><span style={dotStyle} className="col-start-3 row-start-3"></span></>;
+            case 4: return <><span style={dotStyle} className="col-start-1 row-start-1"></span><span style={dotStyle} className="col-start-3 row-start-1"></span><span style={dotStyle} className="col-start-1 row-start-3"></span><span style={dotStyle} className="col-start-3 row-start-3"></span></>;
+            case 5: return <><span style={dotStyle} className="col-start-1 row-start-1"></span><span style={dotStyle} className="col-start-3 row-start-1"></span><span style={dotStyle} className="col-start-2 row-start-2"></span><span style={dotStyle} className="col-start-1 row-start-3"></span><span style={dotStyle} className="col-start-3 row-start-3"></span></>;
+            case 6: return <><span style={dotStyle} className="col-start-1 row-start-1"></span><span style={dotStyle} className="col-start-3 row-start-1"></span><span style={dotStyle} className="col-start-1 row-start-2"></span><span style={dotStyle} className="col-start-3 row-start-2"></span><span style={dotStyle} className="col-start-1 row-start-3"></span><span style={dotStyle} className="col-start-3 row-start-3"></span></>;
+            default: return null;
         }
     };
 
@@ -76,19 +34,10 @@ const DiceFace: React.FC<{ face: number; dotSize: number }> = ({ face, dotSize }
     );
 };
 
-
 const Dice: React.FC<DiceProps> = ({ value, isRolling, size = 50 }) => {
     const translateZ = size / 2;
-    const dotSize = size / 6.5;
+    const dotSize = size / 6;
 
-    // Corrected rotations to ensure the rolled number faces the camera.
-    // Based on standard CSS cube transforms:
-    // 1 (Front) -> 0,0
-    // 2 (Bottom, X -90) -> needs X +90 to face front
-    // 3 (Left, Y -90) -> needs Y +90 to face front
-    // 4 (Right, Y 90) -> needs Y -90 to face front
-    // 5 (Top, X 90) -> needs X -90 to face front
-    // 6 (Back, Y 180) -> needs Y 180 to face front
     const correctedRotations: Record<number, string> = {
         1: 'rotateX(0deg) rotateY(0deg)',
         2: 'rotateX(90deg) rotateY(0deg)', 
@@ -97,38 +46,39 @@ const Dice: React.FC<DiceProps> = ({ value, isRolling, size = 50 }) => {
         5: 'rotateX(-90deg) rotateY(0deg)', 
         6: 'rotateX(0deg) rotateY(180deg)',
     };
-    
 
     const transform = value && !isRolling ? correctedRotations[value] : undefined;
     
+    // Solid Cyberpunk look - No Transparency
     const faceBaseStyle: React.CSSProperties = {
         position: 'absolute',
         width: '100%',
         height: '100%',
-        backfaceVisibility: 'hidden',
-        backgroundColor: '#fefce8', // Ivory
-        borderRadius: '15%',
-        border: '1px solid rgba(0, 0, 0, 0.1)',
+        backfaceVisibility: 'hidden', // Hides the back of the face for a solid look
+        backgroundColor: '#0f172a', // Solid Dark Slate (matches app theme)
+        borderRadius: '8px',
+        border: '2px solid #00f0ff', // Solid neon border
+        boxShadow: '0 0 15px rgba(0, 240, 255, 0.3), inset 0 0 20px rgba(0, 240, 255, 0.1)', // Outer and inner glow
     };
     
     const faceTransforms: Record<string, React.CSSProperties> = {
-        front:  { transform: `translateZ(${translateZ}px)` }, // 1
-        back:   { transform: `rotateY(180deg) translateZ(${translateZ}px)` }, // 6
-        right:  { transform: `rotateY(90deg) translateZ(${translateZ}px)` }, // 4
-        left:   { transform: `rotateY(-90deg) translateZ(${translateZ}px)` }, // 3
-        top:    { transform: `rotateX(90deg) translateZ(${translateZ}px)` }, // 5
-        bottom: { transform: `rotateX(-90deg) translateZ(${translateZ}px)` } // 2
+        front:  { transform: `translateZ(${translateZ}px)` },
+        back:   { transform: `rotateY(180deg) translateZ(${translateZ}px)` },
+        right:  { transform: `rotateY(90deg) translateZ(${translateZ}px)` },
+        left:   { transform: `rotateY(-90deg) translateZ(${translateZ}px)` },
+        top:    { transform: `rotateX(90deg) translateZ(${translateZ}px)` },
+        bottom: { transform: `rotateX(-90deg) translateZ(${translateZ}px)` }
     };
 
     return (
-        <div style={{ width: size, height: size, perspective: '1000px' }} className="flex items-center justify-center">
+        <div style={{ width: size, height: size, perspective: '800px' }} className="flex items-center justify-center">
             <div
                 className={`relative ${isRolling ? 'dice-rolling' : ''}`}
                 style={{
                     width: `${size}px`,
                     height: `${size}px`,
                     transformStyle: 'preserve-3d',
-                    transition: 'transform 1s cubic-bezier(.45, .05, .55, .95)',
+                    transition: 'transform 0.6s cubic-bezier(.34,1.56,.64,1)',
                     transform: transform,
                 }}
             >

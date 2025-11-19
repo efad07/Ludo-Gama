@@ -1,3 +1,4 @@
+
 export type PlayerColor = 'red' | 'green' | 'yellow' | 'blue';
 
 export type PieceStatus = 'base' | 'active' | 'home';
@@ -29,6 +30,12 @@ export interface GameState {
     isRolling: boolean;
     lastDiceValue: number | null;
     lastPlayerRolled: PlayerColor | null;
+    
+    // Online Multiplayer Fields
+    isOnline: boolean;
+    myColor: PlayerColor | null; // The color this client controls (null if local/offline)
+    roomId: string | null;
+    onlineStatus: 'connecting' | 'connected' | 'offline' | 'error';
 }
 
 export interface GameSettings {

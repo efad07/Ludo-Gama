@@ -3,91 +3,106 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ludo World</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    
+    <!-- SEO & Social Sharing Metadata -->
+    <title>Ludo World: Neon Verse | Online Multiplayer</title>
+    <meta name="description" content="Play the Next-Gen Ludo Game! Feature real-time online multiplayer, AI Voice Assistant, and a futuristic Neon UI. Join friends instantly via link." />
+    
+    <!-- Open Graph / Facebook / Messenger -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Join me in Ludo World: Neon Verse!" />
+    <meta property="og:description" content="Click to play Ludo in real-time. No download required. Experience the new Neon Cyberpunk theme." />
+    <meta property="og:image" content="https://cdn.dribbble.com/users/1126935/screenshots/15242502/media/f62d2756e146e632f909126d82727dc6.png" /> 
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --bg-deep: #0f172a;
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --neon-glow: 0 0 10px rgba(255, 255, 255, 0.5), 0 0 20px rgba(255, 255, 255, 0.3);
+      }
       body {
         overscroll-behavior: none;
-        background-color: #382e2e; /* Dark wood table color */
-        background-image: linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
-        background-size: 3px 3px;
-        font-family: 'Poppins', sans-serif;
+        background-color: var(--bg-deep);
+        /* Cyber grid background */
+        background-image: 
+          linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px), 
+          linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+          radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 1) 100%);
+        background-size: 40px 40px, 40px 40px, 100% 100%;
+        font-family: 'Outfit', sans-serif;
+        color: #e2e8f0;
       }
+
+      /* Utility: Glassmorphism */
+      .glass-panel {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.36);
+      }
+
+      /* Dice Animation */
       .dice-rolling {
-        animation: roll 1s ease-out;
+        animation: roll 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
       }
       @keyframes roll {
-        0% { transform: rotateX(0deg) rotateY(0deg); }
-        100% { transform: rotateX(1440deg) rotateY(1080deg); } /* Smoother spin */
+        0% { transform: rotateX(0deg) rotateY(0deg) scale(1); }
+        50% { transform: rotateX(720deg) rotateY(540deg) scale(1.2); }
+        100% { transform: rotateX(1440deg) rotateY(1080deg) scale(1); }
       }
-      @keyframes pulse-glow {
-        0%, 100% {
-          box-shadow: 0 0 15px 4px #fef08a, inset 0 0 5px rgba(255,255,255,0.5);
-        }
-        50% {
-          box-shadow: 0 0 25px 8px #fde047, inset 0 0 7px rgba(255,255,255,0.7);
-        }
+
+      /* Glowing Pulse for Active Turn */
+      @keyframes neon-pulse {
+        0%, 100% { box-shadow: 0 0 5px currentColor, 0 0 10px currentColor; opacity: 1; }
+        50% { box-shadow: 0 0 20px currentColor, 0 0 30px currentColor; opacity: 0.8; }
+      }
+      .turn-indicator {
+        animation: neon-pulse 2s infinite alternate;
+      }
+
+      /* Piece Selection Glow */
+      @keyframes orbit-glow {
+        0% { box-shadow: 0 0 0 0px rgba(255, 255, 255, 0.4); }
+        100% { box-shadow: 0 0 0 8px rgba(255, 255, 255, 0); }
       }
       .piece-movable-animate {
-        animation: pulse-glow 2s infinite ease-in-out;
+        animation: orbit-glow 1.5s infinite;
       }
+
+      /* Smooth Scale In */
       @keyframes scale-in {
-        0% {
-            opacity: 0;
-            transform: scale(0.8) translateY(10px);
-        }
-        100% {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-        }
+        0% { opacity: 0; transform: scale(0.9) translateY(10px); }
+        100% { opacity: 1; transform: scale(1) translateY(0); }
       }
       .animate-scale-in {
-          animation: scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation: scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
       }
       
       /* Custom Scrollbar */
-      .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(0, 0, 0, 0.1);
-          border-radius: 4px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.2);
-          border-radius: 4px;
-      }
-      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.3);
-      }
+      .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+      .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
 
-      /* Ripple Animation for Mic */
+      /* Mic Ripple - Holographic Style */
       @keyframes ripple {
-        0% {
-          box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
-        }
-        70% {
-          box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
-        }
-        100% {
-          box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
-        }
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+        70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
       }
-      .animate-ripple {
-        animation: ripple 1.5s infinite;
-      }
+      .animate-ripple { animation: ripple 1.5s infinite; }
 
       @keyframes float {
         0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-5px); }
+        50% { transform: translateY(-6px); }
       }
-      .animate-float {
-        animation: float 3s ease-in-out infinite;
-      }
+      .animate-float { animation: float 4s ease-in-out infinite; }
     </style>
   <script type="importmap">
 {
@@ -95,7 +110,8 @@
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0"
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "peerjs": "https://esm.sh/peerjs@1.5.2?bundle-deps"
   }
 }
 </script>

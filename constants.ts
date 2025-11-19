@@ -14,25 +14,26 @@ const generatePlayerPath = (startPos: number): number[] => {
     return Array.from({ length: 52 }, (_, i) => (startPos + i) % 52);
 };
 
+// NEO-LUDO COLOR PALETTE
 export const PLAYER_CONFIG: Record<PlayerColor, { name: string; primary: string; path: number[] }> = {
     red: {
-        name: 'Red Player',
-        primary: '#a12d2d',
+        name: 'Red',
+        primary: '#FF0055', // Neon Pink/Red
         path: generatePlayerPath(START_POSITIONS.red)
     },
     green: {
-        name: 'Green Player',
-        primary: '#1a7431',
+        name: 'Green',
+        primary: '#00FF9D', // Cyber Green
         path: generatePlayerPath(START_POSITIONS.green)
     },
     yellow: {
-        name: 'Yellow Player',
-        primary: '#b45309',
+        name: 'Yellow',
+        primary: '#FFEA00', // Electric Yellow
         path: generatePlayerPath(START_POSITIONS.yellow)
     },
     blue: {
-        name: 'Blue Player',
-        primary: '#1e40af',
+        name: 'Blue',
+        primary: '#00CCFF', // Laser Blue
         path: generatePlayerPath(START_POSITIONS.blue)
     },
 };

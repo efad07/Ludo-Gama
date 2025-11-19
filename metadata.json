@@ -1,5 +1,5 @@
 {
-  "name": "React Ludo Game",
+  "name": "Win Ludo Game",
   "description": "A classic Ludo board game built with React and Tailwind CSS. It supports four players and follows the standard rules, including safe spots, capturing pieces, and requiring a six to start. The game features an interactive UI with dice rolling and animated piece movement.",
   "requestFramePermissions": [
     "microphone"

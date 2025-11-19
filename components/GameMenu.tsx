@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 
 const GearIcon = () => (
@@ -12,9 +13,12 @@ interface GameMenuProps {
     onResetGame: () => void;
     isAssistantVisible: boolean;
     onToggleAssistant: () => void;
+    isOnline?: boolean;
+    roomId?: string | null;
+    onlineStatus?: 'connecting' | 'connected' | 'offline' | 'error';
 }
 
-const GameMenu: React.FC<GameMenuProps> = ({ onOpenRules, onOpenSettings, onResetGame, isAssistantVisible, onToggleAssistant }) => {
+const GameMenu: React.FC<GameMenuProps> = ({ onOpenRules, onOpenSettings, onResetGame, isAssistantVisible, onToggleAssistant, isOnline, roomId, onlineStatus }) => {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -37,39 +41,57 @@ const GameMenu: React.FC<GameMenuProps> = ({ onOpenRules, onOpenSettings, onRese
     };
 
     return (
-        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-40" ref={menuRef}>
+        <div className="absolute top-4 right-4 z-40 flex gap-2 items-center" ref={menuRef}>
+            {isOnline && (
+                 <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 border border-white/10 backdrop-blur-sm animate-scale-in">
+                    <div className={`w-2 h-2 rounded-full ${onlineStatus === 'connected' ? 'bg-green-400 shadow-[0_0_8px_#4ade80]' : 'bg-yellow-400 animate-pulse'}`}></div>
+                    <span className="text-xs font-mono text-white/80">
+                        Room: {roomId}
+                    </span>
+                </div>
+            )}
+
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="p-2 rounded-full text-white/80 hover:text-white hover:bg-black/20 transition-all duration-200"
+                className="p-2.5 rounded-full text-white/70 hover:text-white bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/5 transition-all duration-200 shadow-lg"
                 aria-label="Game Menu"
             >
                 <GearIcon />
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-[#fefce8] rounded-lg shadow-2xl border border-amber-800/20 py-2 origin-top-right animate-scale-in">
+                <div className="absolute right-0 top-12 w-60 glass-panel rounded-2xl py-2 origin-top-right animate-scale-in overflow-hidden z-50">
                     <button
                         onClick={() => handleMenuItemClick(onOpenRules)}
-                        className="w-full text-left px-4 py-2 text-amber-900 hover:bg-amber-100 hover:text-amber-900 transition-colors"
+                        className="w-full text-left px-5 py-3 text-white/80 hover:bg-white/10 transition-colors text-sm font-medium"
                     >
                         Game Rules
                     </button>
                     <button
                         onClick={() => handleMenuItemClick(onOpenSettings)}
-                        className="w-full text-left px-4 py-2 text-amber-900 hover:bg-amber-100 hover:text-amber-900 transition-colors"
+                        className="w-full text-left px-5 py-3 text-white/80 hover:bg-white/10 transition-colors text-sm font-medium"
                     >
                         Settings
                     </button>
                     <button
                         onClick={() => handleMenuItemClick(onToggleAssistant)}
-                        className="w-full text-left px-4 py-2 text-amber-900 hover:bg-amber-100 hover:text-amber-900 transition-colors"
+                        className="w-full text-left px-5 py-3 text-white/80 hover:bg-white/10 transition-colors text-sm font-medium"
                     >
-                        {isAssistantVisible ? 'Hide Assistant' : 'Show Assistant'}
+                        {isAssistantVisible ? 'Hide AI Assistant' : 'Show AI Assistant'}
                     </button>
-                    <div className="border-t border-amber-800/20 my-1"></div>
+                    
+                    {isOnline && (
+                         <div className="px-5 py-3 bg-white/5 text-xs font-mono text-white/60 break-all border-t border-white/5">
+                             ID: {roomId}
+                             <br/>
+                             Status: <span className={onlineStatus === 'connected' ? 'text-green-400' : 'text-yellow-400'}>{onlineStatus}</span>
+                         </div>
+                    )}
+
+                    <div className="border-t border-white/10 my-1"></div>
                     <button
                         onClick={() => handleMenuItemClick(onResetGame)}
-                        className="w-full text-left px-4 py-2 text-red-600 font-semibold hover:bg-red-100 hover:text-red-700 transition-colors"
+                        className="w-full text-left px-5 py-3 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors text-sm font-bold"
                     >
                         Reset Game
                     </button>
