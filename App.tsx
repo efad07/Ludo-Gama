@@ -1,12 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Board from './components/Board';
 import Settings from './components/Settings';
 import Rules from './components/Rules';
 import { useGameLogic } from './hooks/useGameLogic';
 import type { GameSettings, PlayerColor } from './types';
 import PlayerInfo from './components/PlayerInfo';
-import { PLAYER_CONFIG } from './constants';
+import { PLAYER_CONFIG, SOUNDS } from './constants';
 import GameMenu from './components/GameMenu';
 import { AudioProvider } from './components/AudioChat';
 
@@ -23,16 +23,69 @@ const App: React.FC = () => {
         },
     });
 
-    const { gameState, handleRollDice, handlePieceMove, handleResetGame, initializeHost } = useGameLogic(gameSettings.playerNames);
+    const { gameState, handleRollDice, handlePieceMove, handleResetGame, initializeHost, toggleVoiceChat, toggleMute, remoteAudioRef } = useGameLogic(gameSettings.playerNames);
 
     const handleSaveSettings = (newSettings: GameSettings) => {
         setGameSettings(newSettings);
         setIsSettingsOpen(false);
     };
 
+    // --- Sound Effects System (Preloaded) ---
+    const audioCache = useRef<Record<string, HTMLAudioElement>>({});
+
+    // Preload sounds on mount
+    useEffect(() => {
+        const preloadSounds = () => {
+            const cache: Record<string, HTMLAudioElement> = {};
+            
+            // Map trigger types to sound URLs
+            const soundMap: Record<string, string> = {
+                'roll': SOUNDS.DICE,
+                'move': SOUNDS.MOVE,
+                'capture': SOUNDS.CAPTURE,
+                'home': SOUNDS.HOME,
+                'win': SOUNDS.WIN
+            };
+
+            Object.entries(soundMap).forEach(([key, url]) => {
+                const audio = new Audio(url);
+                audio.volume = 0.6; // Set default volume
+                audio.preload = 'auto'; // Force preload
+                cache[key] = audio;
+            });
+
+            audioCache.current = cache;
+        };
+
+        preloadSounds();
+    }, []);
+
+    // Play sounds based on trigger
+    useEffect(() => {
+        if (!gameState.audioTrigger) return;
+
+        const { type } = gameState.audioTrigger;
+        const audio = audioCache.current[type];
+
+        if (audio) {
+            // Reset time to 0 to allow rapid re-playing (e.g. fast clicks)
+            audio.currentTime = 0;
+            
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.warn("Audio playback failed (likely autoplay policy):", error);
+                });
+            }
+        }
+    }, [gameState.audioTrigger]);
+
     return (
         <AudioProvider gameState={gameState} isAssistantVisible={isAssistantVisible}>
-            <main className="w-screen h-screen flex flex-col justify-center items-center p-4 text-slate-200 overflow-hidden relative">
+            <main className="w-screen h-screen flex flex-col justify-center items-center p-2 sm:p-4 overflow-hidden relative text-slate-200">
+                {/* Remote Audio Element for WebRTC Voice Chat */}
+                <audio ref={remoteAudioRef} autoPlay style={{ display: 'none' }} />
+
                  <GameMenu
                     onOpenRules={() => setIsRulesOpen(true)}
                     onOpenSettings={() => setIsSettingsOpen(true)}
@@ -42,17 +95,16 @@ const App: React.FC = () => {
                     isOnline={gameState.isOnline}
                     roomId={gameState.roomId}
                     onlineStatus={gameState.onlineStatus}
+                    // Voice Chat Props
+                    voiceChatStatus={gameState.voiceChatStatus}
+                    isMicMuted={gameState.isMicMuted}
+                    onToggleVoiceChat={toggleVoiceChat}
+                    onToggleMute={toggleMute}
                 />
                 
-                {/* Decorative background elements - Dark Mode */}
-                <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
-                    <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-blue-600/20 rounded-full blur-[120px]"></div>
-                    <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-purple-600/20 rounded-full blur-[120px]"></div>
-                </div>
-
-                <div className="flex flex-col justify-center items-center w-full max-w-[800px] mx-auto gap-4 z-10">
+                <div className="flex flex-col justify-center items-center w-full max-w-[600px] mx-auto gap-2 z-10">
                     {/* Top Players */}
-                    <div className="flex justify-between items-center w-full gap-4">
+                    <div className="flex justify-between items-center w-full gap-2">
                         {(['red', 'green'] as PlayerColor[]).map((color) => (
                             <PlayerInfo
                                 key={color}
@@ -71,7 +123,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Board */}
-                    <div className="w-full max-w-[500px] aspect-square animate-float">
+                    <div className="w-full max-w-[500px] aspect-square">
                         <Board 
                             pieces={Object.values(gameState.pieces)}
                             onPieceClick={handlePieceMove}
@@ -80,7 +132,7 @@ const App: React.FC = () => {
                     </div>
 
                     {/* Bottom Players */}
-                    <div className="flex justify-between items-center w-full gap-4">
+                    <div className="flex justify-between items-center w-full gap-2">
                          {(['blue', 'yellow'] as PlayerColor[]).map((color) => (
                             <PlayerInfo
                                 key={color}
@@ -100,10 +152,10 @@ const App: React.FC = () => {
                 </div>
                 
                 {/* Footer / Message Bar */}
-                <footer className="absolute bottom-6 left-0 right-0 flex justify-center pointer-events-none z-20">
-                     <div className="glass-panel bg-slate-900/80 px-8 py-3 rounded-full shadow-[0_0_20px_rgba(0,0,0,0.4)] border border-white/10 flex items-center gap-2 backdrop-blur-xl">
-                        <div className={`w-2 h-2 rounded-full animate-pulse ${gameState.isOnline ? 'bg-blue-400 shadow-[0_0_10px_#60a5fa]' : 'bg-green-400'}`}></div>
-                        <p className="text-white/90 font-medium tracking-wide text-sm sm:text-base">
+                <footer className="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none z-20">
+                     <div className="bg-slate-900/90 px-6 py-2 rounded-full shadow-lg border border-white/10 flex items-center gap-2 backdrop-blur-sm">
+                        <div className={`w-2 h-2 rounded-full animate-pulse ${gameState.isOnline ? 'bg-blue-400' : 'bg-green-400'}`}></div>
+                        <p className="text-white/90 font-medium text-sm">
                             {gameState.isOnline && gameState.myColor ? `(You are ${gameState.myColor}) ` : ''}
                             {gameState.message}
                         </p>
@@ -112,19 +164,14 @@ const App: React.FC = () => {
 
                 {/* Winner Overlay */}
                 {gameState.winner && (
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-xl flex flex-col justify-center items-center z-50 animate-scale-in">
-                        <div className="text-center space-y-6 p-8 border border-white/10 rounded-3xl bg-white/5 shadow-2xl">
-                            <h2 className="text-6xl sm:text-8xl font-black mb-4 tracking-tighter" style={{ 
-                                color: PLAYER_CONFIG[gameState.winner].primary,
-                                textShadow: `0 0 30px ${PLAYER_CONFIG[gameState.winner].primary}`
-                            }}>
-                                {gameState.players[gameState.winner].name}
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col justify-center items-center z-50 animate-scale-in">
+                        <div className="text-center space-y-6 p-8 border border-white/10 rounded-3xl bg-slate-800 shadow-2xl">
+                            <h2 className="text-5xl font-black mb-4" style={{ color: PLAYER_CONFIG[gameState.winner].primary }}>
+                                {gameState.players[gameState.winner].name} Wins!
                             </h2>
-                            <p className="text-2xl text-white/80 uppercase tracking-widest">Victory Achieved</p>
-                            
                             <button
-                                onClick={handleResetGame}
-                                className="mt-8 px-10 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold text-xl rounded-xl hover:scale-105 transition-transform focus:outline-none shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+                                onClick={() => handleResetGame({ disconnect: false })}
+                                className="px-8 py-3 bg-blue-600 text-white font-bold text-lg rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
                             >
                                 Play Again
                             </button>

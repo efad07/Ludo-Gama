@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { GameState, PlayerColor, Piece, GameStatus, PieceStatus } from '../types';
 import { PLAYER_COLORS, START_POSITIONS, SAFE_SPOTS } from '../constants';
-import Peer, { DataConnection } from 'peerjs';
+import Peer, { DataConnection, MediaConnection } from 'peerjs';
 
 const createInitialState = (playerNames: Record<PlayerColor, string>): GameState => {
     const pieces: Record<string, Piece> = {};
@@ -35,11 +35,15 @@ const createInitialState = (playerNames: Record<PlayerColor, string>): GameState
         lastDiceValue: null,
         lastPlayerRolled: null,
         
+        audioTrigger: null,
+        
         // Online Initial State
         isOnline: false,
         myColor: null,
         roomId: null,
-        onlineStatus: 'offline'
+        onlineStatus: 'offline',
+        voiceChatStatus: 'idle',
+        isMicMuted: true
     };
 };
 
@@ -52,7 +56,88 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
     // Refs for PeerJS
     const peerRef = useRef<Peer | null>(null);
     const connRef = useRef<DataConnection | null>(null);
+    const callRef = useRef<MediaConnection | null>(null);
     const isHostRef = useRef<boolean>(false);
+    
+    // Remote Audio Ref to attach to an HTMLAudioElement
+    const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+    const localStreamRef = useRef<MediaStream | null>(null);
+
+    // --- WebRTC Audio Logic ---
+    const toggleMute = useCallback(() => {
+        if (localStreamRef.current) {
+            localStreamRef.current.getAudioTracks().forEach(track => {
+                track.enabled = !track.enabled;
+            });
+            setGameState(prev => ({ ...prev, isMicMuted: !prev.isMicMuted }));
+        }
+    }, []);
+
+    const toggleVoiceChat = useCallback(async () => {
+        // LEAVE CHAT
+        if (gameState.voiceChatStatus === 'connected' || gameState.voiceChatStatus === 'calling') {
+             if (callRef.current) callRef.current.close();
+             if (localStreamRef.current) localStreamRef.current.getTracks().forEach(t => t.stop());
+             localStreamRef.current = null;
+             callRef.current = null;
+             setGameState(prev => ({ ...prev, voiceChatStatus: 'idle', isMicMuted: true }));
+             return;
+        }
+
+        // JOIN CHAT
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            localStreamRef.current = stream;
+            // Start muted by default
+            stream.getAudioTracks().forEach(t => t.enabled = false);
+            
+            setGameState(prev => ({ ...prev, voiceChatStatus: 'calling', isMicMuted: true }));
+
+            if (!peerRef.current) return;
+
+            if (isHostRef.current) {
+                 // Host waits for incoming call
+                 peerRef.current.on('call', (call) => {
+                     call.answer(stream); // Answer with our stream
+                     callRef.current = call;
+                     
+                     call.on('stream', (remoteStream) => {
+                         if (remoteAudioRef.current) {
+                             remoteAudioRef.current.srcObject = remoteStream;
+                             remoteAudioRef.current.play().catch(e => console.error("Audio play failed", e));
+                         }
+                         setGameState(prev => ({ ...prev, voiceChatStatus: 'connected' }));
+                     });
+                     
+                     call.on('close', () => {
+                         setGameState(prev => ({ ...prev, voiceChatStatus: 'idle' }));
+                     });
+                 });
+            } else {
+                // Guest calls the Host
+                // We need the host's peer ID. Since we are connected via DataConnection, we assume peer ID is roomId
+                if (gameState.roomId) {
+                    const call = peerRef.current.call(gameState.roomId, stream);
+                    callRef.current = call;
+                    
+                    call.on('stream', (remoteStream) => {
+                        if (remoteAudioRef.current) {
+                             remoteAudioRef.current.srcObject = remoteStream;
+                             remoteAudioRef.current.play().catch(e => console.error("Audio play failed", e));
+                        }
+                        setGameState(prev => ({ ...prev, voiceChatStatus: 'connected' }));
+                    });
+
+                    call.on('close', () => {
+                         setGameState(prev => ({ ...prev, voiceChatStatus: 'idle' }));
+                     });
+                }
+            }
+        } catch (err) {
+            console.error("Voice chat error", err);
+            setGameState(prev => ({ ...prev, voiceChatStatus: 'error' }));
+        }
+    }, [gameState.voiceChatStatus, gameState.roomId]);
 
     // --- Online Multiplayer Logic ---
 
@@ -61,7 +146,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
         if (peerRef.current) peerRef.current.destroy();
 
         const roomId = generateRoomId();
-        const peer = new Peer(roomId); // We try to use the RoomID as the PeerID for simplicity
+        const peer = new Peer(roomId); 
         
         return new Promise((resolve, reject) => {
             peer.on('open', (id) => {
@@ -88,7 +173,6 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                                onlineStatus: 'connected' as const, 
                                message: 'Friend joined! Game starting.' 
                            };
-                           // Send full state immediately
                            conn.send({ type: 'SYNC_STATE', payload: newState });
                            return newState;
                         });
@@ -101,6 +185,12 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                     conn.on('close', () => {
                          setGameState(prev => ({ ...prev, onlineStatus: 'error', message: 'Friend disconnected.' }));
                     });
+                });
+                
+                // Also setup listener for voice calls immediately
+                peer.on('call', (call) => {
+                    // We handle this inside toggleVoiceChat usually, but we need to ensure we don't miss it
+                    // The logic is moved to toggleVoiceChat to ensure we have a stream ready.
                 });
 
                 resolve(id);
@@ -140,7 +230,6 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
 
                 conn.on('open', () => {
                     setGameState(prev => ({ ...prev, onlineStatus: 'connected', message: 'Connected!' }));
-                    // Request state or just wait for Host to send it
                 });
 
                 conn.on('data', (data: any) => {
@@ -152,12 +241,6 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                 });
              });
         }
-        
-        return () => {
-            // Cleanup on unmount is tricky with strict mode double-mount, 
-            // usually we want to keep connection alive if possible, but for safety:
-            // peerRef.current?.destroy(); 
-        };
     }, []);
 
     // Handle incoming data from Peer
@@ -169,7 +252,9 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                     ...data.payload,
                     myColor: prev.myColor, 
                     isOnline: true,
-                    onlineStatus: 'connected'
+                    onlineStatus: 'connected',
+                    voiceChatStatus: prev.voiceChatStatus, // Preserve voice status
+                    isMicMuted: prev.isMicMuted
                 };
             });
         } else if (data.type === 'ACTION_UPDATE') {
@@ -178,7 +263,9 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                  const newState = {
                      ...prev,
                      ...data.payload,
-                     myColor: prev.myColor // Persist identity
+                     myColor: prev.myColor, // Persist identity
+                     voiceChatStatus: prev.voiceChatStatus,
+                     isMicMuted: prev.isMicMuted
                  };
                  return newState;
              });
@@ -188,9 +275,9 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
     // Broadcast state changes
     const broadcastState = (newState: GameState) => {
         if (connRef.current && connRef.current.open) {
-            // We send the whole state for simplicity to ensure sync
-            // But we strip out local-only fields if necessary.
-            connRef.current.send({ type: 'ACTION_UPDATE', payload: newState });
+            // Remove local-only states before sending
+            const { voiceChatStatus, isMicMuted, ...payload } = newState;
+            connRef.current.send({ type: 'ACTION_UPDATE', payload });
         }
     };
 
@@ -205,9 +292,14 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
 
 
     const getNextPlayer = useCallback((currentPlayer: PlayerColor): PlayerColor => {
+        if (gameState.isOnline) {
+             // Online is strictly 1v1: Red vs Green
+             return currentPlayer === 'red' ? 'green' : 'red';
+        }
+        // Offline is standard 4-player rotation
         const currentIndex = PLAYER_COLORS.indexOf(currentPlayer);
         return PLAYER_COLORS[(currentIndex + 1) % PLAYER_COLORS.length];
-    }, []);
+    }, [gameState.isOnline]);
 
     const checkForWinner = useCallback((pieces: Record<string, Piece>, color: PlayerColor): boolean => {
         return Object.values(pieces)
@@ -371,6 +463,11 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
             }
             
             let newState = { ...prev };
+            
+            // Determine Audio Trigger
+            let audioType: 'move' | 'capture' | 'home' | 'win' = 'move';
+            if (isCapture) audioType = 'capture';
+            else if (pieceReachedHome) audioType = 'home';
 
             if (checkForWinner(newPieces, currentPlayer)) {
                 newState = {
@@ -382,6 +479,7 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                     lastDiceValue: diceValue,
                     lastPlayerRolled: currentPlayer,
                     diceValue: null,
+                    audioTrigger: { type: 'win', id: Date.now() }
                 };
             } else if (turnContinues) {
                 newState = {
@@ -390,7 +488,8 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                     status: 'waiting-for-roll',
                     diceValue: null,
                     message: message || `${playerNames[currentPlayer]}, roll again!`,
-                    movablePieces: []
+                    movablePieces: [],
+                    audioTrigger: { type: audioType, id: Date.now() }
                 };
             } else {
                 const nextPlayer = getNextPlayer(currentPlayer);
@@ -404,7 +503,8 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
                     status: 'waiting-for-roll',
                     message: `${playerNames[nextPlayer]}, roll the dice!`,
                     sixStreak: 0,
-                    movablePieces: []
+                    movablePieces: [],
+                    audioTrigger: { type: audioType, id: Date.now() }
                 };
             }
             
@@ -421,7 +521,14 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
 
         setGameState(prev => {
             if (prev.status !== 'waiting-for-roll' || prev.winner || prev.isRolling) return prev;
-            const newState = { ...prev, isRolling: true, lastDiceValue: null, lastPlayerRolled: null };
+            // Set Rolling trigger immediately to start sound/animation
+            const newState = { 
+                ...prev, 
+                isRolling: true, 
+                lastDiceValue: null, 
+                lastPlayerRolled: null,
+                audioTrigger: { type: 'roll', id: Date.now() } 
+            };
             if (prev.isOnline) broadcastState(newState);
             return newState;
         });
@@ -535,11 +642,28 @@ export const useGameLogic = (playerNames: Record<PlayerColor, string>) => {
         }
     }, [gameState.status, gameState.movablePieces, gameState.winner, handlePieceMove, gameState.isOnline, gameState.currentPlayer, gameState.myColor]);
 
-    const handleResetGame = useCallback(() => {
+    const handleResetGame = useCallback((options?: { disconnect?: boolean }) => {
         const newState = createInitialState(playerNames);
-        setGameState(newState);
-        if (gameState.isOnline) broadcastState(newState);
-    }, [playerNames, gameState.isOnline]);
+        
+        if (options?.disconnect) {
+            // Full reset to offline
+            if (peerRef.current) peerRef.current.destroy();
+            peerRef.current = null;
+            isHostRef.current = false;
+            setGameState(newState); // Defaults to offline
+        } else {
+            // Restart match but keep connection
+            if (gameState.isOnline) {
+                // Keep online fields
+                newState.isOnline = true;
+                newState.myColor = gameState.myColor;
+                newState.roomId = gameState.roomId;
+                newState.onlineStatus = 'connected';
+                broadcastState(newState);
+            }
+            setGameState(newState);
+        }
+    }, [playerNames, gameState.isOnline, gameState.myColor, gameState.roomId]);
 
-    return { gameState, handleRollDice, handlePieceMove, handleResetGame, initializeHost };
+    return { gameState, handleRollDice, handlePieceMove, handleResetGame, initializeHost, toggleVoiceChat, toggleMute, remoteAudioRef };
 };

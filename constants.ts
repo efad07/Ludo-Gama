@@ -1,3 +1,4 @@
+
 import type { PlayerColor } from './types';
 
 export const PLAYER_COLORS: PlayerColor[] = ['red', 'green', 'yellow', 'blue'];
@@ -9,31 +10,49 @@ export const START_POSITIONS: Record<PlayerColor, number> = {
     blue: 39
 };
 
+// Sound Effects - Using Reliable Google Actions & CDN Links
+export const SOUNDS = {
+    // Real shaking dice sound
+    DICE: 'https://actions.google.com/sounds/v1/foley/shake_dice_in_cup.ogg', 
+    
+    // Distinct Drop/Click sound for movement
+    MOVE: 'https://actions.google.com/sounds/v1/water/water_drop.ogg', 
+    
+    // Impact sound for sending a piece back
+    CAPTURE: 'https://actions.google.com/sounds/v1/impacts/wood_plank_flick.ogg', 
+    
+    // Satisfying pop for reaching the home path
+    HOME: 'https://actions.google.com/sounds/v1/cartoon/pop.ogg', 
+    
+    // Crowd celebration for winning
+    WIN: 'https://actions.google.com/sounds/v1/crowds/female_crowd_celebration.ogg' 
+};
+
 // Helper function to generate the 52-step main track path for a player
 const generatePlayerPath = (startPos: number): number[] => {
     return Array.from({ length: 52 }, (_, i) => (startPos + i) % 52);
 };
 
-// NEO-LUDO COLOR PALETTE
+// CLASSIC FLAT LUDO PALETTE (Based on Image)
 export const PLAYER_CONFIG: Record<PlayerColor, { name: string; primary: string; path: number[] }> = {
     red: {
         name: 'Red',
-        primary: '#FF0055', // Neon Pink/Red
+        primary: '#ef4444', // Vibrant Red
         path: generatePlayerPath(START_POSITIONS.red)
     },
     green: {
         name: 'Green',
-        primary: '#00FF9D', // Cyber Green
+        primary: '#22c55e', // Classic Green
         path: generatePlayerPath(START_POSITIONS.green)
     },
     yellow: {
         name: 'Yellow',
-        primary: '#FFEA00', // Electric Yellow
+        primary: '#fbbf24', // Warm Yellow
         path: generatePlayerPath(START_POSITIONS.yellow)
     },
     blue: {
         name: 'Blue',
-        primary: '#00CCFF', // Laser Blue
+        primary: '#0ea5e9', // Sky Blue/Cyan
         path: generatePlayerPath(START_POSITIONS.blue)
     },
 };

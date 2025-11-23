@@ -17,6 +17,11 @@ export interface Player {
 
 export type GameStatus = 'waiting-for-roll' | 'waiting-for-move' | 'game-over';
 
+export interface AudioTrigger {
+    type: 'roll' | 'move' | 'capture' | 'home' | 'win';
+    id: number; // timestamp to ensure uniqueness
+}
+
 export interface GameState {
     players: Record<PlayerColor, Player>;
     pieces: Record<string, Piece>;
@@ -31,11 +36,18 @@ export interface GameState {
     lastDiceValue: number | null;
     lastPlayerRolled: PlayerColor | null;
     
+    // Audio Trigger for Sound Effects
+    audioTrigger: AudioTrigger | null;
+
     // Online Multiplayer Fields
     isOnline: boolean;
     myColor: PlayerColor | null; // The color this client controls (null if local/offline)
     roomId: string | null;
     onlineStatus: 'connecting' | 'connected' | 'offline' | 'error';
+    
+    // Voice Chat State
+    voiceChatStatus: 'idle' | 'calling' | 'connected' | 'error';
+    isMicMuted: boolean;
 }
 
 export interface GameSettings {

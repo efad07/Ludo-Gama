@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 interface DiceProps {
@@ -10,25 +11,27 @@ const DiceFace: React.FC<{ face: number; dotSize: number }> = ({ face, dotSize }
     const dotStyle: React.CSSProperties = {
         width: `${dotSize}px`,
         height: `${dotSize}px`,
-        backgroundColor: '#00f0ff', // Cyan neon dots
         borderRadius: '50%',
-        boxShadow: '0 0 5px #00f0ff, 0 0 10px #00f0ff', // Glowing dots
+        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.6), 0 1px 1px rgba(255,255,255,0.5)', // Deep inset look
     };
     
+    const blackDot = { ...dotStyle, backgroundColor: '#0f172a' }; // Deep Slate
+    const redDot = { ...dotStyle, backgroundColor: '#dc2626', width: dotSize * 1.3, height: dotSize * 1.3 }; // Vibrant Red
+
     const renderDots = () => {
         switch (face) {
-            case 1: return <span style={dotStyle} className="col-start-2 row-start-2"></span>;
-            case 2: return <><span style={dotStyle} className="col-start-1 row-start-1"></span><span style={dotStyle} className="col-start-3 row-start-3"></span></>;
-            case 3: return <><span style={dotStyle} className="col-start-1 row-start-1"></span><span style={dotStyle} className="col-start-2 row-start-2"></span><span style={dotStyle} className="col-start-3 row-start-3"></span></>;
-            case 4: return <><span style={dotStyle} className="col-start-1 row-start-1"></span><span style={dotStyle} className="col-start-3 row-start-1"></span><span style={dotStyle} className="col-start-1 row-start-3"></span><span style={dotStyle} className="col-start-3 row-start-3"></span></>;
-            case 5: return <><span style={dotStyle} className="col-start-1 row-start-1"></span><span style={dotStyle} className="col-start-3 row-start-1"></span><span style={dotStyle} className="col-start-2 row-start-2"></span><span style={dotStyle} className="col-start-1 row-start-3"></span><span style={dotStyle} className="col-start-3 row-start-3"></span></>;
-            case 6: return <><span style={dotStyle} className="col-start-1 row-start-1"></span><span style={dotStyle} className="col-start-3 row-start-1"></span><span style={dotStyle} className="col-start-1 row-start-2"></span><span style={dotStyle} className="col-start-3 row-start-2"></span><span style={dotStyle} className="col-start-1 row-start-3"></span><span style={dotStyle} className="col-start-3 row-start-3"></span></>;
+            case 1: return <span style={redDot} className="col-start-2 row-start-2"></span>;
+            case 2: return <><span style={blackDot} className="col-start-1 row-start-1"></span><span style={blackDot} className="col-start-3 row-start-3"></span></>;
+            case 3: return <><span style={blackDot} className="col-start-1 row-start-1"></span><span style={blackDot} className="col-start-2 row-start-2"></span><span style={blackDot} className="col-start-3 row-start-3"></span></>;
+            case 4: return <><span style={blackDot} className="col-start-1 row-start-1"></span><span style={blackDot} className="col-start-3 row-start-1"></span><span style={blackDot} className="col-start-1 row-start-3"></span><span style={blackDot} className="col-start-3 row-start-3"></span></>;
+            case 5: return <><span style={blackDot} className="col-start-1 row-start-1"></span><span style={blackDot} className="col-start-3 row-start-1"></span><span style={blackDot} className="col-start-2 row-start-2"></span><span style={blackDot} className="col-start-1 row-start-3"></span><span style={blackDot} className="col-start-3 row-start-3"></span></>;
+            case 6: return <><span style={blackDot} className="col-start-1 row-start-1"></span><span style={blackDot} className="col-start-3 row-start-1"></span><span style={blackDot} className="col-start-1 row-start-2"></span><span style={blackDot} className="col-start-3 row-start-2"></span><span style={blackDot} className="col-start-1 row-start-3"></span><span style={blackDot} className="col-start-3 row-start-3"></span></>;
             default: return null;
         }
     };
 
     return (
-        <div className="w-full h-full p-1 grid grid-cols-3 grid-rows-3 place-items-center">
+        <div className="w-full h-full p-1.5 grid grid-cols-3 grid-rows-3 place-items-center">
             {renderDots()}
         </div>
     );
@@ -36,7 +39,7 @@ const DiceFace: React.FC<{ face: number; dotSize: number }> = ({ face, dotSize }
 
 const Dice: React.FC<DiceProps> = ({ value, isRolling, size = 50 }) => {
     const translateZ = size / 2;
-    const dotSize = size / 6;
+    const dotSize = size / 5.5;
 
     const correctedRotations: Record<number, string> = {
         1: 'rotateX(0deg) rotateY(0deg)',
@@ -47,18 +50,18 @@ const Dice: React.FC<DiceProps> = ({ value, isRolling, size = 50 }) => {
         6: 'rotateX(0deg) rotateY(180deg)',
     };
 
-    const transform = value && !isRolling ? correctedRotations[value] : undefined;
+    const transform = value && !isRolling ? correctedRotations[value] : 'rotateX(-25deg) rotateY(-25deg)';
     
-    // Solid Cyberpunk look - No Transparency
+    // Realistic Plastic Look
     const faceBaseStyle: React.CSSProperties = {
         position: 'absolute',
         width: '100%',
         height: '100%',
-        backfaceVisibility: 'hidden', // Hides the back of the face for a solid look
-        backgroundColor: '#0f172a', // Solid Dark Slate (matches app theme)
-        borderRadius: '8px',
-        border: '2px solid #00f0ff', // Solid neon border
-        boxShadow: '0 0 15px rgba(0, 240, 255, 0.3), inset 0 0 20px rgba(0, 240, 255, 0.1)', // Outer and inner glow
+        backfaceVisibility: 'hidden',
+        background: 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%)', // Subtle gradient
+        borderRadius: '16%', // Smooth rounded corners
+        boxShadow: 'inset 0 0 12px rgba(0,0,0,0.15)', // Inner shadow for depth
+        border: '1px solid #cbd5e1',
     };
     
     const faceTransforms: Record<string, React.CSSProperties> = {
@@ -78,7 +81,7 @@ const Dice: React.FC<DiceProps> = ({ value, isRolling, size = 50 }) => {
                     width: `${size}px`,
                     height: `${size}px`,
                     transformStyle: 'preserve-3d',
-                    transition: 'transform 0.6s cubic-bezier(.34,1.56,.64,1)',
+                    transition: 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)', // Bouncy transition
                     transform: transform,
                 }}
             >
@@ -89,6 +92,8 @@ const Dice: React.FC<DiceProps> = ({ value, isRolling, size = 50 }) => {
                 <div style={{...faceBaseStyle, ...faceTransforms.top}}><DiceFace face={5} dotSize={dotSize}/></div>
                 <div style={{...faceBaseStyle, ...faceTransforms.back}}><DiceFace face={6} dotSize={dotSize}/></div>
             </div>
+             {/* Shadow below dice */}
+             <div className="absolute -bottom-4 w-[80%] h-2 bg-black/20 blur-md rounded-full transform scale-x-75 transition-all duration-300"></div>
         </div>
     );
 };
